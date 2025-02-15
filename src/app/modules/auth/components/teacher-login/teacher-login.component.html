@@ -1,0 +1,152 @@
+<div class="teacher-login min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
+  <div class="w-full max-w-md space-y-6 bg-white p-8 rounded-xl shadow-lg">
+    <!-- Header -->
+    <div class="flex items-center justify-between">
+      <button 
+        (click)="goBack()"
+        class="flex items-center text-gray-600 hover:text-gray-900"
+      >
+        <i class="material-icons">arrow_back</i>
+        Back
+      </button>
+      <h1 class="text-2xl font-bold text-gray-900">Teacher Login</h1>
+    </div>
+
+    <!-- Error Message -->
+    <div *ngIf="errorMessage" class="bg-red-50 border border-red-200 p-4 rounded-lg">
+      <div class="flex items-center">
+        <i class="material-icons text-red-600">error</i>
+        <p class="ml-2 text-red-800">{{ errorMessage }}</p>
+      </div>
+    </div>
+
+    <!-- Multi-device Alert -->
+    <div *ngIf="multiDeviceAlert" class="bg-yellow-50 border border-yellow-200 p-4 rounded-lg">
+      <div class="flex items-center">
+        <i class="material-icons text-yellow-600">warning</i>
+        <p class="ml-2 text-yellow-800">You are logged in on another device. Would you like to continue?</p>
+      </div>
+    </div>
+
+    <!-- Login Form -->
+    <ng-container *ngIf="!showTwoFactor; else twoFactorTemplate">
+      <!-- Login Method Tabs -->
+      <div class="flex space-x-4 border-b border-gray-200">
+        <button *ngFor="let method of loginMethods"
+          (click)="loginMethod = method.id"
+          [class]="loginMethod === method.id ? 
+            'pb-2 px-1 border-b-2 border-green-500 text-green-600 font-medium' :
+            'pb-2 px-1 text-gray-500 hover:text-gray-700'"
+        >
+          {{ method.label }}
+        </button>
+      </div>
+
+      <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="space-y-4">
+        <ng-container [ngSwitch]="loginMethod">
+          
+          <!-- Email Login -->
+          <ng-container *ngSwitchCase="'email'">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
+              <div class="relative">
+                <i class="material-icons absolute left-3 top-2.5 text-gray-400">mail</i>
+                <input
+                  type="email"
+                  formControlName="email"
+                  class="pl-10 w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="your.email@school.edu"
+                >
+              </div>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+              <div class="relative">
+                <i class="material-icons absolute left-3 top-2.5 text-gray-400">key</i>
+                <input
+                  [type]="showPassword ? 'text' : 'password'"
+                  formControlName="password"
+                  class="pl-10 w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                >
+              </div>
+            </div>
+          </ng-container>
+
+          <!-- School ID Login -->
+          <ng-container *ngSwitchCase="'school'">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">School ID</label>
+              <div class="relative">
+                <i class="material-icons absolute left-3 top-2.5 text-gray-400">school</i>
+                <input
+                  type="text"
+                  formControlName="schoolId"
+                  class="pl-10 w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Enter your school ID"
+                >
+              </div>
+            </div>
+          </ng-container>
+
+          <!-- Phone Login -->
+          <ng-container *ngSwitchCase="'phone'">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
+              <div class="relative">
+                <i class="material-icons absolute left-3 top-2.5 text-gray-400">phone</i>
+                <input
+                  type="tel"
+                  formControlName="phone"
+                  class="pl-10 w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Enter your phone number"
+                >
+              </div>
+            </div>
+          </ng-container>
+        </ng-container>
+
+        <button
+          type="submit"
+          [disabled]="loginForm.invalid || isLoading"
+          [class.loading]="isLoading"
+          class="w-full bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-lg transition-colors"
+        >
+          {{ loginMethod === 'phone' ? 'Send OTP' : 'Login' }}
+        </button>
+      </form>
+
+      <div class="text-center">
+        <button (click)="forgotPassword()" class="text-blue-600 hover:text-blue-800 text-sm">
+          Forgot password?
+        </button>
+      </div>
+    </ng-container>
+  </div>
+</div>
+
+<ng-template #twoFactorTemplate>
+  <form [formGroup]="twoFactorForm" (ngSubmit)="verifyTwoFactor()" class="space-y-4">
+    <div class="text-center mb-4">
+      <i class="material-icons text-green-500 text-5xl">mail</i>
+      <h2 class="text-xl font-semibold">Check your email</h2>
+      <p class="text-gray-600">We've sent a verification code to your email</p>
+    </div>
+    <div>
+      <label class="block text-sm font-medium text-gray-700 mb-1">Verification Code</label>
+      <input
+        type="text"
+        formControlName="code"
+        class="verification-code w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+        placeholder="Enter 6-digit code"
+        maxlength="6"
+      >
+    </div>
+    <button
+      type="submit"
+      [disabled]="twoFactorForm.invalid || isLoading"
+      class="w-full bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-lg transition-colors"
+    >
+      Verify
+    </button>
+  </form>
+</ng-template>

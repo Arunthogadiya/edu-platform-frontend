@@ -1,0 +1,124 @@
+.min-h-screen {
+  min-height: 100vh;
+}
+
+.role-selection-container {
+  min-height: 100vh;
+  background-color: #f9fafb;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+
+  .selection-card {
+    width: 100%;
+    max-width: 28rem;
+    background-color: white;
+    padding: 2rem;
+    border-radius: 0.75rem;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+
+    .header {
+      text-align: center;
+      margin-bottom: 2rem;
+
+      h1 {
+        font-size: 1.875rem;
+        font-weight: 700;
+        color: #111827;
+        margin-bottom: 0.5rem;
+      }
+
+      p {
+        color: #4b5563;
+      }
+    }
+
+    .role-buttons {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+
+      .role-button {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.75rem;
+        padding: 1rem;
+        border: none;
+        border-radius: 0.5rem;
+        font-size: 1.125rem;
+        font-weight: 500;
+        transition: background-color 0.2s;
+        color: white;
+        cursor: pointer;
+
+        i {
+          font-size: 1.5rem;
+        }
+
+        &.parent-button {
+          background-color: #2563eb;
+          &:hover {
+            background-color: #1d4ed8;
+          }
+        }
+
+        &.teacher-button {
+          background-color: #059669;
+          &:hover {
+            background-color: #047857;
+          }
+        }
+      }
+    }
+
+    .footer {
+      padding-top: 1.5rem;
+      border-top: 1px solid #e5e7eb;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+
+      .language-selector {
+        display: flex;
+        align-items: center;
+        color: #4b5563;
+        cursor: pointer;
+        
+        &:hover {
+          color: #111827;
+        }
+
+        i {
+          margin-right: 0.5rem;
+        }
+      }
+
+      .actions {
+        display: flex;
+        gap: 1rem;
+
+        button {
+          display: flex;
+          align-items: center;
+          color: #4b5563;
+          background: none;
+          border: none;
+          cursor: pointer;
+
+          &:hover {
+            color: #111827;
+          }
+
+          i {
+            margin-right: 0.5rem;
+          }
+        }
+      }
+    }
+  }
+}

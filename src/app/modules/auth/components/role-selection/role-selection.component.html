@@ -1,0 +1,39 @@
+<div class="role-selection-container">
+  <div class="selection-card">
+    <div class="header">
+      <h1>Welcome to EngageEd</h1>
+      <p>Please select your role to continue</p>
+    </div>
+
+    <div class="role-buttons">
+      <button class="role-button parent-button" (click)="selectRole('parent')">
+        <i class="material-icons">family_restroom</i>
+        <span>I am a Parent</span>
+      </button>
+
+      <button class="role-button teacher-button" (click)="selectRole('teacher')">
+        <i class="material-icons">school</i>
+        <span>I am a Teacher</span>
+      </button>
+    </div>
+
+    <div class="footer">
+      <div class="language-selector" (click)="toggleLanguageSelect()">
+        <i class="material-icons">language</i>
+        <span>{{ selectedLanguage }}</span>
+      </div>
+
+      <div class="actions">
+        <button (click)="openHelp()">
+          <i class="material-icons">help</i>
+          <span>Help</span>
+        </button>
+
+        <button (click)="toggleVoice()">
+          <i class="material-icons">volume_up</i>
+          <span>Voice</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,131 @@
+<div class="login-container">
+  <div class="login-card">
+    <div class="header">
+      <h1>Parent Login</h1>
+      <p>Welcome back to EngageEd</p>
+    </div>
+
+    <!-- Error Message Display -->
+    <div *ngIf="errorMessage" class="error-banner">
+      <i class="material-icons">error</i>
+      <span>{{ errorMessage }}</span>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div *ngIf="isLoading" class="loading-overlay">
+      <div class="spinner"></div>
+      <span>Please wait...</span>
+    </div>
+
+    <div class="login-methods">
+      <button [class.active]="loginMethod === 'mobile'" (click)="onLoginMethodChange('mobile')" class="method-button">
+        <i class="material-icons">phone_android</i>
+        <span>Mobile Number</span>
+      </button>
+      <button [class.active]="loginMethod === 'google'" (click)="onLoginMethodChange('google')" class="method-button">
+        <i class="material-icons">google</i>
+        <span>Google</span>
+      </button>
+      <button [class.active]="loginMethod === 'facebook'" (click)="onLoginMethodChange('facebook')" class="method-button">
+        <i class="material-icons">facebook</i>
+        <span>Facebook</span>
+      </button>
+      <button [class.active]="loginMethod === 'school'" (click)="onLoginMethodChange('school')" class="method-button">
+        <i class="material-icons">school</i>
+        <span>School ID</span>
+      </button>
+      <button [class.active]="loginMethod === 'voice'" (click)="onLoginMethodChange('voice')" class="method-button">
+        <i class="material-icons">mic</i>
+        <span>Voice Login</span>
+      </button>
+    </div>
+
+    <!-- Mobile Number Login Form -->
+    <form *ngIf="loginMethod === 'mobile' && !showOtpInput" [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="login-form">
+      <div class="form-group">
+        <label for="mobile">Mobile Number</label>
+        <div class="input-group">
+          <span class="prefix">+91</span>
+          <input 
+            type="tel" 
+            id="mobile" 
+            formControlName="mobileNumber"
+            placeholder="Enter your mobile number"
+            maxlength="10"
+          >
+        </div>
+        <div *ngIf="loginForm.get('mobileNumber')?.errors?.['pattern']" class="error-message">
+          Please enter a valid 10-digit mobile number
+        </div>
+      </div>
+      <button type="submit" [disabled]="loginForm.invalid || isLoading" class="submit-button">
+        <span *ngIf="!isLoading">Get OTP</span>
+        <span *ngIf="isLoading">Sending...</span>
+      </button>
+    </form>
+
+    <!-- OTP Verification Form -->
+    <form *ngIf="showOtpInput" [formGroup]="otpForm" (ngSubmit)="verifyOtp()" class="otp-form">
+      <div class="form-group">
+        <label for="otp">Enter OTP</label>
+        <input 
+          type="text" 
+          id="otp" 
+          formControlName="otp"
+          placeholder="Enter 6-digit OTP"
+          maxlength="6"
+        >
+        <div class="resend-timer" *ngIf="!canResendOtp">
+          Resend OTP in {{ resendTimer }}s
+        </div>
+        <button 
+          type="button" 
+          class="resend-button" 
+          [disabled]="!canResendOtp"
+          (click)="resendOtp()"
+        >
+          Resend OTP
+        </button>
+      </div>
+      <button type="submit" [disabled]="otpForm.invalid || isLoading" class="submit-button">
+        <span *ngIf="!isLoading">Verify OTP</span>
+        <span *ngIf="isLoading">Verifying...</span>
+      </button>
+    </form>
+
+    <!-- School ID Login Form -->
+    <form *ngIf="loginMethod === 'school'" [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="login-form">
+      <div class="form-group">
+        <label for="schoolId">School ID</label>
+        <input 
+          type="text" 
+          id="schoolId" 
+          formControlName="schoolId"
+          placeholder="Enter your school ID"
+        >
+      </div>
+      <button type="submit" [disabled]="!loginForm.get('schoolId')?.value || isLoading" class="submit-button">
+        <span *ngIf="!isLoading">Login</span>
+        <span *ngIf="isLoading">Verifying...</span>
+      </button>
+    </form>
+
+    <!-- Voice Login UI -->
+    <div *ngIf="loginMethod === 'voice'" class="voice-login">
+      <div class="voice-prompt">
+        <i class="material-icons" [class.listening]="isListening">mic</i>
+        <p>Say "Login to EduPal"</p>
+      </div>
+    </div>
+
+    <!-- Help Section -->
+    <div class="help-section">
+      <button (click)="resetPassword()" class="help-button">
+        Reset via OTP
+      </button>
+      <button (click)="contactSchoolAdmin()" class="help-button">
+        Contact School Admin
+      </button>
+    </div>
+  </div>
+</div>
