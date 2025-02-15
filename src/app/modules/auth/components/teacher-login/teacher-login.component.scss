@@ -224,3 +224,118 @@ body {
 .text-gray-600 {
   color: #4b5563;
 }
+
+.teacher-login {
+    // Add spacing between form elements
+    > * + * {
+        margin-top: 1.5rem;
+    }
+
+    input {
+        width: 100%;
+        padding: 0.75rem 1rem;
+        border: 1px solid #d1d5db;
+        border-radius: 0.5rem;
+        transition: all 0.2s ease;
+        margin-bottom: 1rem;
+        
+        &:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+        }
+        
+        &.ng-invalid.ng-touched {
+            border-color: #ef4444;
+            
+            &:focus {
+                box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.1);
+            }
+        }
+
+        &.pl-10 {
+            padding-left: 2.5rem;
+        }
+    }
+
+    .submit-btn {
+        width: 100%;
+        padding: 0.875rem 1.25rem;
+        margin: 1.5rem 0;
+        background-color: #16a34a;
+        color: white;
+        font-weight: 500;
+        border-radius: 0.5rem;
+        transition: all 0.2s ease;
+        
+        &:hover:not(:disabled) {
+            background-color: #15803d;
+        }
+        
+        &:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
+        
+        &.loading {
+            color: transparent;
+            position: relative;
+            pointer-events: none;
+            
+            &::after {
+                content: '';
+                position: absolute;
+                left: 50%;
+                top: 50%;
+                width: 20px;
+                height: 20px;
+                margin: -10px 0 0 -10px;
+                border: 2px solid rgba(255, 255, 255, 0.3);
+                border-top-color: white;
+                border-radius: 50%;
+                animation: button-loading 0.8s infinite linear;
+            }
+        }
+    }
+
+    .tab-button {
+        padding: 0.75rem 1.25rem;
+        margin-right: 1rem;
+        color: #6b7280;
+        transition: all 0.2s ease;
+        position: relative;
+        
+        &::after {
+            content: '';
+            position: absolute;
+            bottom: -1px;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background-color: #22c55e;
+            transform: scaleX(0);
+            transition: transform 0.2s ease;
+        }
+        
+        &.active {
+            color: #16a34a;
+            font-weight: 500;
+            
+            &::after {
+                transform: scaleX(1);
+            }
+        }
+    }
+}
+
+@keyframes button-loading {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+.material-icons {
+    font-size: 20px;
+    line-height: 1;
+    vertical-align: middle;
+    margin-right: 0.5rem;
+}

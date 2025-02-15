@@ -12,7 +12,8 @@ type LoginMethodType = 'email' | 'school' | 'phone' | 'google';
   imports: [CommonModule, FormsModule, ReactiveFormsModule],
   templateUrl: './teacher-login.component.html',
   styleUrls: ['./teacher-login.component.scss'],
-  encapsulation: ViewEncapsulation.None
+  // Change to Emulated for better CSS isolation
+  encapsulation: ViewEncapsulation.Emulated
 })
 export class TeacherLoginComponent {
   loginForm: FormGroup;

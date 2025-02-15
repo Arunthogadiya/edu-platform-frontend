@@ -1,5 +1,5 @@
 <div class="teacher-login min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
-  <div class="w-full max-w-md space-y-6 bg-white p-8 rounded-xl shadow-lg">
+  <div class="login-form-container w-full max-w-md space-y-6 bg-white p-8 rounded-xl shadow-lg">
     <!-- Header -->
     <div class="flex items-center justify-between">
       <button 
@@ -34,9 +34,8 @@
       <div class="flex space-x-4 border-b border-gray-200">
         <button *ngFor="let method of loginMethods"
           (click)="loginMethod = method.id"
-          [class]="loginMethod === method.id ? 
-            'pb-2 px-1 border-b-2 border-green-500 text-green-600 font-medium' :
-            'pb-2 px-1 text-gray-500 hover:text-gray-700'"
+          class="tab-button"
+          [class.active]="loginMethod === method.id"
         >
           {{ method.label }}
         </button>
@@ -109,7 +108,7 @@
           type="submit"
           [disabled]="loginForm.invalid || isLoading"
           [class.loading]="isLoading"
-          class="w-full bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-lg transition-colors"
+          class="submit-btn"
         >
           {{ loginMethod === 'phone' ? 'Send OTP' : 'Login' }}
         </button>
