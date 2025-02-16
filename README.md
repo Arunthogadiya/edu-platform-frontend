@@ -50,7 +50,7 @@ The project follows a standard Vite + React structure with TypeScript support an
 
 ## Maintainers
 
-- Vipin (Lead Developer)
+- Vipin
 
 ## License
 
