@@ -11,7 +11,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const navigate = useNavigate();
   const location = useLocation();
-  const userData = JSON.parse(sessionStorage.getItem('userData') || 'null');
+  const userData = JSON.parse(localStorage.getItem('userData') || 'null');  // Changed from sessionStorage to localStorage
 
   // Handle window resize
   useEffect(() => {
@@ -27,6 +27,14 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
     return () => window.removeEventListener('resize', handleResize);
   }, [isSidebarOpen]);
 
+  // Check authentication
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      navigate('/select-role');
+    }
+  }, [navigate]);
+
   // Close sidebar on mobile when route changes
   useEffect(() => {
     if (isMobile) {
@@ -35,8 +43,8 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
   }, [location.pathname, isMobile]);
 
   const handleLogout = () => {
-    sessionStorage.removeItem('isAuthenticated');
-    sessionStorage.removeItem('userData');
+    localStorage.removeItem('token');
+    localStorage.removeItem('userData');
     navigate('/select-role');
   };
 

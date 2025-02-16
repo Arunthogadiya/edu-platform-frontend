@@ -9,6 +9,8 @@ import AttendanceBehavior from './components/dashboard/parent/pages/AttendanceBe
 import Messages from './components/dashboard/parent/pages/Messages'
 import { PrivateRoute } from './components/auth/PrivateRoute'
 import DashboardLayout from './components/dashboard/layouts/DashboardLayout'
+import { LanguageProvider } from './contexts/LanguageContext'
+import './i18n'; // Import i18n configuration
 
 const ProtectedDashboard = () => {
   return (
@@ -22,24 +24,38 @@ const ProtectedDashboard = () => {
 
 function App() {
   return (
-    <Router>
-      <Routes>
-        <Route path="/select-role" element={<RoleSelectionPage />} />
-        <Route path="/auth/teacher" element={<TeacherLogin />} />
-        <Route path="/auth/parent" element={<ParentLogin />} />
-        
-        {/* Nested dashboard routes under a single protected layout */}
-        <Route element={<ProtectedDashboard />}>
-          <Route path="/parent/dashboard" element={<ParentDashboard />}>
-            <Route path="academics" element={<AcademicPerformance />} />
-            <Route path="attendance" element={<AttendanceBehavior />} />
-            <Route path="messages" element={<Messages />} />
+    <LanguageProvider>
+      <Router>
+        <Routes>
+          <Route path="/select-role" element={<RoleSelectionPage />} />
+          
+          {/* Auth routes */}
+          <Route path="/auth">
+            <Route path="teacher">
+              <Route path="login" element={<TeacherLogin />} />
+              <Route path="register" element={<TeacherLogin />} />
+              <Route index element={<Navigate to="login" replace />} />
+            </Route>
+            <Route path="parent">
+              <Route path="login" element={<ParentLogin />} />
+              <Route path="register" element={<ParentLogin />} />
+              <Route index element={<Navigate to="login" replace />} />
+            </Route>
           </Route>
-        </Route>
+          
+          {/* Nested dashboard routes under a single protected layout */}
+          <Route element={<ProtectedDashboard />}>
+            <Route path="/parent/dashboard" element={<ParentDashboard />}>
+              <Route path="academics" element={<AcademicPerformance />} />
+              <Route path="attendance" element={<AttendanceBehavior />} />
+              <Route path="messages" element={<Messages />} />
+            </Route>
+          </Route>
 
-        <Route path="/" element={<Navigate to="/select-role" replace />} />
-      </Routes>
-    </Router>
+          <Route path="/" element={<Navigate to="/select-role" replace />} />
+        </Routes>
+      </Router>
+    </LanguageProvider>
   )
 }
 

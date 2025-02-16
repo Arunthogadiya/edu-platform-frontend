@@ -6,9 +6,10 @@ interface PrivateRouteProps {
 }
 
 export const PrivateRoute: FC<PrivateRouteProps> = ({ children }) => {
-  const isAuthenticated = sessionStorage.getItem('isAuthenticated') === 'true';
-  
-  if (!isAuthenticated) {
+  const token = localStorage.getItem('token');
+  const userData = JSON.parse(localStorage.getItem('userData') || 'null');
+
+  if (!token || !userData) {
     return <Navigate to="/select-role" replace />;
   }
 
