@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Menu, X, User, LogOut, Layout, GraduationCap, Calendar, MessageSquare, Bot, Users, HelpCircle, Home } from 'lucide-react';
+import { Menu, X, User, LogOut, Layout, GraduationCap, Calendar, MessageSquare, Bot, Users, HelpCircle, Home, Brain } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import DashboardErrorBoundary from '../parent/DashboardErrorBoundary';
 import VoiceQuery from '../parent/VoiceQuery';
@@ -95,6 +95,15 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
       bgColor: 'hover:bg-yellow-50'
     },
     { 
+      id: 'community', 
+      icon: Users, 
+      label: 'Community', 
+      description: 'Connect with parents', 
+      path: '/parent/dashboard/community',
+      color: 'text-indigo-600',
+      bgColor: 'hover:bg-indigo-50'
+    },
+    { 
       id: 'helper', 
       icon: HelpCircle, 
       label: 'Help & Support', 
@@ -102,6 +111,15 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
       path: '/parent/dashboard/helper',
       color: 'text-red-600',
       bgColor: 'hover:bg-red-50'
+    },
+    { 
+      id: 'behavior', 
+      icon: Brain, 
+      label: 'Behavior', 
+      description: 'Track social-emotional growth', 
+      path: '/parent/dashboard/behavior',
+      color: 'text-rose-600',
+      bgColor: 'hover:bg-rose-50'
     }
   ];
 
