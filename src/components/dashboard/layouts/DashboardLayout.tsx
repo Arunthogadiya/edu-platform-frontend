@@ -92,11 +92,13 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
     <div className="min-h-screen bg-gray-50">
       {/* Fixed Top Navbar */}
       <nav className="bg-gradient-to-r from-blue-600 to-blue-700 shadow-lg fixed w-full z-50">
-        <div className="max-w-7xl mx-auto flex items-center justify-between h-16">
+        <div className="max-w-8xl mx-auto flex items-center justify-between h-16">
           <div className="flex items-center px-4">
             <button
               onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-              className="p-2 rounded-lg text-white transition-all duration-200 hover:bg-white/10 active:scale-95"
+              className="p-2 rounded-lg text-white transition-all duration-200 
+                bg-white/5 hover:bg-white/20 active:bg-white/10
+                focus:ring-2 focus:ring-white/20 focus:outline-none"
               aria-label={isSidebarOpen ? "Close menu" : "Open menu"}
             >
               {isSidebarOpen ? <X size={24} /> : <Menu size={24} />}
@@ -107,13 +109,15 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
           </div>
           
           <div className="flex items-center space-x-4 px-4">
-            <div className="hidden md:flex items-center p-2 text-white rounded-lg transition-all duration-200 hover:bg-white/10">
+            <div className="hidden md:flex items-center p-2 text-white rounded-lg bg-white/5">
               <User size={20} />
               <span className="ml-2 text-sm">{userData?.name}</span>
             </div>
             <button 
               onClick={handleLogout}
-              className="flex items-center p-2 rounded-lg text-white transition-all duration-200 hover:bg-white/10 active:scale-95"
+              className="flex items-center p-2 rounded-lg text-white transition-all duration-200 
+                bg-white/5 hover:bg-white/20 active:bg-white/10
+                focus:ring-2 focus:ring-white/20 focus:outline-none"
               aria-label="Sign out"
             >
               <LogOut size={20} />
@@ -141,29 +145,39 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
                     setIsSidebarOpen(false);
                   }
                 }}
-                className={`w-full flex items-center px-4 py-4 transition-all duration-200 relative
+                className={`w-full flex items-center relative mx-2 rounded-lg
+                  ${isSidebarOpen ? 'px-4 py-3' : 'h-12 px-2 justify-center'}
                   ${isActive 
-                    ? `${item.bgColor} border-l-4 border-current ${item.color}` 
-                    : 'border-l-4 border-transparent hover:border-current'}
-                  group active:scale-[0.99]`}
+                    ? `bg-gradient-to-r ${item.bgColor.replace('hover:', '')} shadow-lg transform scale-105 
+                       ring-1 ring-${item.color.replace('text-', '')}/20` 
+                    : 'hover:bg-gray-50 hover:scale-[1.02] hover:shadow-md'}
+                  group focus:outline-none
+                  transition-all duration-200 ease-in-out my-1`}
                 aria-label={item.label}
               >
-                <div className={`flex-shrink-0 transition-colors duration-200 ${isActive ? item.color : 'text-gray-500 group-hover:' + item.color}`}>
-                  <item.icon size={24} />
+                <div className={`flex-shrink-0 transition-all duration-200 
+                  ${isActive 
+                    ? `${item.color} transform scale-110 filter drop-shadow-sm` 
+                    : `text-gray-500 group-hover:${item.color} group-hover:scale-110`}
+                  ${!isSidebarOpen ? 'transform scale-105' : ''}`}>
+                  <item.icon size={!isSidebarOpen ? 22 : 24} strokeWidth={isActive ? 2.5 : 2} />
                 </div>
                 <div className={`ml-4 text-left transition-all duration-200 
-                  ${isMobile ? 'opacity-100' : (isSidebarOpen ? 'opacity-100' : 'opacity-0')}`}
+                  ${isMobile ? 'opacity-100' : (isSidebarOpen ? 'opacity-100 flex-1' : 'opacity-0 w-0 ml-0')}`}
                 >
                   <div className={`text-base font-medium transition-colors duration-200 
-                    ${isActive ? item.color : 'text-gray-700 group-hover:' + item.color}`}>
+                    ${isActive ? `${item.color} font-semibold filter drop-shadow-sm` : `text-gray-700 group-hover:${item.color}`}`}>
                     {item.label}
                   </div>
-                  <div className="text-sm text-gray-500">{item.description}</div>
+                  <div className={`text-sm transition-opacity duration-200 
+                    ${isActive ? 'text-gray-600' : 'text-gray-500 group-hover:text-gray-600'}`}>
+                    {item.description}
+                  </div>
                 </div>
                 {!isMobile && !isSidebarOpen && (
-                  <div className={`absolute left-full ml-2 p-2 ${item.color} bg-opacity-10 text-sm rounded-md 
+                  <div className={`absolute left-full ml-2 px-2.5 py-1.5 bg-gray-800 text-white text-sm rounded-md 
                     opacity-0 group-hover:opacity-100 transition-all duration-200 whitespace-nowrap z-50
-                    transform translate-x-2 group-hover:translate-x-0`}>
+                    transform translate-x-1 group-hover:translate-x-0 pointer-events-none shadow-lg`}>
                     {item.label}
                   </div>
                 )}
