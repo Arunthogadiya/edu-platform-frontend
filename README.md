@@ -1,11 +1,65 @@
-# React + TypeScript + Vite
+# Engage-ED Frontend Platform
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+An educational platform frontend built with React, TypeScript, and Vite that provides interactive learning experiences.
 
-Currently, two official plugins are available:
+## Tech Stack
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- React 18
+- TypeScript
+- Vite
+- TailwindCSS
+- Chart.js
+- i18next for internationalization
+
+## Getting Started
+
+1. Install dependencies:
+```bash
+npm install
+```
+
+2. Run development server:
+```bash
+npm run dev
+```
+
+3. Build for production:
+```bash
+npm run build
+```
+
+## Features
+
+- Modern React with TypeScript
+- Fast development with Vite
+- Responsive design with TailwindCSS
+- Data visualization using Chart.js
+- Internationalization support
+- Media capture capabilities
+
+## Project Structure
+
+The project follows a standard Vite + React structure with TypeScript support and additional features for educational platform needs.
+
+## Scripts
+
+- `npm run dev` - Start development server
+- `npm run build` - Build for production
+- `npm run lint` - Run ESLint
+- `npm run preview` - Preview production build
+
+## Maintainers
+
+- Vipin (Lead Developer)
+
+## License
+
+Private - All rights reserved
+
+---
+
+For detailed technical documentation about Vite configuration and plugins, see:
+- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md)
 
 ## Expanding the ESLint configuration
 
@@ -47,4 +101,3 @@ export default tseslint.config({
     ...react.configs['jsx-runtime'].rules,
   },
 })
-```
