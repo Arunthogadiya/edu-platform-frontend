@@ -14,6 +14,7 @@ import DashboardLayout from './components/dashboard/layouts/DashboardLayout'
 import { LanguageProvider } from './contexts/LanguageContext'
 import './i18n'; // Import i18n configuration
 import BehaviorTracker from './components/dashboard/parent/pages/BehaviorTracker';
+import TalentProfile from './components/dashboard/parent/pages/TalentProfile';
 
 const ProtectedDashboard = () => {
   return (
@@ -55,6 +56,7 @@ function App() {
               <Route path="messages" element={<Messages />} />
               <Route path="community" element={<Community />} />
               <Route path="behavior" element={<BehaviorTracker />} />
+              <Route path="talent" element={<TalentProfile />} />
             </Route>
           </Route>
 
