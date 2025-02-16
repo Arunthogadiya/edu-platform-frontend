@@ -7,6 +7,7 @@ import ParentDashboard from './components/dashboard/parent/ParentDashboard'
 import AcademicPerformance from './components/dashboard/parent/pages/AcademicPerformance'
 import AttendanceBehavior from './components/dashboard/parent/pages/AttendanceBehavior'
 import Messages from './components/dashboard/parent/pages/Messages'
+import EduPal from './components/dashboard/parent/EduPal'
 import { PrivateRoute } from './components/auth/PrivateRoute'
 import DashboardLayout from './components/dashboard/layouts/DashboardLayout'
 import { LanguageProvider } from './contexts/LanguageContext'
@@ -18,6 +19,7 @@ const ProtectedDashboard = () => {
       <DashboardLayout>
         <Outlet />
       </DashboardLayout>
+      <EduPal />
     </PrivateRoute>
   );
 };

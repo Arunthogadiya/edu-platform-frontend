@@ -23,173 +23,143 @@ interface DashboardData {
   };
 }
 
+const MOCK_TIMELINE = [
+  { time: '8:45 AM', event: 'Arrived at school', type: 'attendance' },
+  { time: '9:00 AM', event: 'Mathematics Class', type: 'class' },
+  { time: '10:30 AM', event: 'Science Test', type: 'assessment' },
+  { time: '12:00 PM', event: 'Lunch Break', type: 'break' },
+  { time: '1:00 PM', event: 'English Class', type: 'class' },
+];
+
 const ParentDashboard: React.FC = () => {
   const isIndexRoute = useMatch('/parent/dashboard');
-  const userData = JSON.parse(localStorage.getItem('userData') || 'null');
-  const [isLoading, setIsLoading] = useState(true);
   const [dashboardData, setDashboardData] = useState<DashboardData>({});
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const fetchDashboardData = async () => {
+    const loadDashboardData = async () => {
       try {
-        setIsLoading(true);
-        const childId = userData?.childId || 456; // Fallback to demo ID
-        const date = new Date();
-        const currentMonth = String(date.getMonth() + 1).padStart(2, '0');
-        
-        const [grades, attendance, activities, behavior] = await Promise.all([
-          dashboardService.fetchGrades(childId, date.toISOString().split('T')[0]),
-          dashboardService.fetchAttendance(childId, currentMonth),
-          dashboardService.fetchActivities(childId),
-          dashboardService.fetchBehavior(childId)
-        ]);
-
-        setDashboardData({ grades, attendance, activities, behavior });
+        // Get mock data directly
+        const data = {
+          grades: dashboardService.getMockGrades(),
+          attendance: dashboardService.getMockAttendance(),
+          activities: dashboardService.getMockActivities(),
+          behavior: dashboardService.getMockBehavior()
+        };
+        setDashboardData(data);
       } catch (error) {
-        console.error('Error fetching dashboard data:', error);
+        console.error('Error loading dashboard data:', error);
       } finally {
         setIsLoading(false);
       }
     };
 
     if (isIndexRoute) {
-      fetchDashboardData();
+      loadDashboardData();
     }
-  }, [isIndexRoute, userData]);
+  }, [isIndexRoute]);
 
-  const renderOverview = () => (
+  if (!isIndexRoute) {
+    return <Outlet />;
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  return (
     <div className="p-8">
-      {isLoading ? (
-        <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      {/* Quick Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className="bg-purple-50 p-6 rounded-xl border border-purple-100 hover:shadow-md transition-shadow">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-purple-900">Today's Classes</h3>
+            <Clock className="h-6 w-6 text-purple-500" />
+          </div>
+          <p className="text-2xl font-bold text-purple-700">6/6</p>
+          <p className="text-sm text-purple-600 mt-1">Classes completed</p>
         </div>
-      ) : (
-        <>
-          {/* Quick Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            <div className="bg-purple-50 p-6 rounded-xl border border-purple-100 hover:shadow-md transition-shadow">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-purple-900">Today's Classes</h3>
-                <Clock className="h-6 w-6 text-purple-500" />
-              </div>
-              <p className="text-2xl font-bold text-purple-700">
-                {dashboardData.attendance?.attendance?.[0]?.classes_attended || '5/6'}
-              </p>
-              <p className="text-sm text-purple-600 mt-1">Classes completed</p>
-            </div>
 
-            <div className="bg-green-50 p-6 rounded-xl border border-green-100 hover:shadow-md transition-shadow">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-green-900">Attendance</h3>
-                <Calendar className="h-6 w-6 text-green-500" />
-              </div>
-              <p className="text-2xl font-bold text-green-700">
-                {dashboardData.attendance?.attendance?.[0]?.status || 'Present'}
-              </p>
-              <p className="text-sm text-green-600 mt-1">
-                {dashboardData.attendance?.attendance?.[0]?.arrival_time || 'Arrived at 8:45 AM'}
-              </p>
-            </div>
-
-            <div className="bg-blue-50 p-6 rounded-xl border border-blue-100 hover:shadow-md transition-shadow">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-blue-900">Activities</h3>
-                <Activity className="h-6 w-6 text-blue-500" />
-              </div>
-              <p className="text-2xl font-bold text-blue-700">
-                {dashboardData.activities?.activities?.length || 0}
-              </p>
-              <p className="text-sm text-blue-600 mt-1">Active participations</p>
-            </div>
-
-            <div className="bg-yellow-50 p-6 rounded-xl border border-yellow-100 hover:shadow-md transition-shadow">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-yellow-900">Achievements</h3>
-                <Award className="h-6 w-6 text-yellow-500" />
-              </div>
-              <p className="text-2xl font-bold text-yellow-700">
-                {dashboardData.behavior?.behavior_records?.filter(r => r.sentiment_score > 0.8).length || 0}
-              </p>
-              <p className="text-sm text-yellow-600 mt-1">Notable achievements</p>
-            </div>
+        <div className="bg-green-50 p-6 rounded-xl border border-green-100 hover:shadow-md transition-shadow">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-green-900">Attendance</h3>
+            <Calendar className="h-6 w-6 text-green-500" />
           </div>
+          <p className="text-2xl font-bold text-green-700">Present</p>
+          <p className="text-sm text-green-600 mt-1">On time - 8:45 AM</p>
+        </div>
 
-          {/* Recent Updates and Timeline */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            {/* Timeline */}
-            <div className="bg-white p-6 rounded-xl border border-gray-200">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-lg font-semibold text-gray-900">Today's Timeline</h2>
-                <Clock className="h-5 w-5 text-gray-500" />
-              </div>
-              <div className="space-y-6">
-                {[
-                  { time: '8:45 AM', event: 'Arrived at school', type: 'attendance' },
-                  { time: '9:00 AM', event: 'Mathematics Class', type: 'class' },
-                  { time: '10:30 AM', event: 'Science Test', type: 'assessment' },
-                  { time: '12:00 PM', event: 'Lunch Break', type: 'break' },
-                  { time: '1:00 PM', event: 'English Class', type: 'class' },
-                ].map((item, index) => (
-                  <div key={index} className="flex items-start">
-                    <div className="flex-shrink-0 w-16 text-sm text-gray-500">
-                      {item.time}
-                    </div>
-                    <div className={`w-px h-full mx-4 ${
-                      item.type === 'assessment' ? 'bg-yellow-500' :
-                      item.type === 'class' ? 'bg-blue-500' :
-                      item.type === 'break' ? 'bg-green-500' : 'bg-gray-300'
-                    }`} />
-                    <div className="flex-1 pt-0.5">
-                      <p className="text-sm font-medium text-gray-900">{item.event}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Recent Updates */}
-            <div className="bg-white p-6 rounded-xl border border-gray-200">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-lg font-semibold text-gray-900">Recent Updates</h2>
-                <Bell className="h-5 w-5 text-gray-500" />
-              </div>
-              <div className="space-y-4">
-                {[
-                  ...(dashboardData.activities?.activities?.map((activity: Activity) => ({
-                    title: `Activity Update`,
-                    description: `${activity.activity_name}`,
-                    time: 'Recent',
-                    icon: TrendingUp,
-                    color: 'text-green-500'
-                  })) || []),
-                  ...(dashboardData.activities?.activities?.map(activity => ({
-                    title: activity.activity_name,
-                    description: `Earned: ${activity.badge}`,
-                    time: 'Recent',
-                    icon: Award,
-                    color: 'text-purple-500'
-                  })) || [])
-                ].slice(0, 3).map((update, index) => (
-                  <div key={index} className="flex items-start p-3 bg-gray-50 rounded-lg">
-                    <div className={`flex-shrink-0 ${update.color}`}>
-                      <update.icon className="h-5 w-5" />
-                    </div>
-                    <div className="ml-4">
-                      <p className="text-sm font-medium text-gray-900">{update.title}</p>
-                      <p className="text-sm text-gray-500">{update.description}</p>
-                      <p className="text-xs text-gray-400 mt-1">{update.time}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
+        <div className="bg-blue-50 p-6 rounded-xl border border-blue-100 hover:shadow-md transition-shadow">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-blue-900">Activities</h3>
+            <Activity className="h-6 w-6 text-blue-500" />
           </div>
-        </>
-      )}
+          <p className="text-2xl font-bold text-blue-700">
+            {dashboardData.activities?.activities?.length || 3}
+          </p>
+          <p className="text-sm text-blue-600 mt-1">Active participations</p>
+        </div>
+
+        <div className="bg-yellow-50 p-6 rounded-xl border border-yellow-100 hover:shadow-md transition-shadow">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-yellow-900">Performance</h3>
+            <Award className="h-6 w-6 text-yellow-500" />
+          </div>
+          <p className="text-2xl font-bold text-yellow-700">A+</p>
+          <p className="text-sm text-yellow-600 mt-1">Overall grade</p>
+        </div>
+      </div>
+
+      {/* Recent Updates and Timeline */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {/* Timeline */}
+        <div className="bg-white p-6 rounded-xl border border-gray-200">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-lg font-semibold text-gray-900">Today's Timeline</h2>
+            <Clock className="h-5 w-5 text-gray-500" />
+          </div>
+          <div className="space-y-6">
+            {MOCK_TIMELINE.map((item, index) => (
+              <div key={index} className="flex items-start">
+                <div className="flex-shrink-0 w-16 text-sm text-gray-500">{item.time}</div>
+                <div className={`w-px h-full mx-4 ${
+                  item.type === 'assessment' ? 'bg-yellow-500' :
+                  item.type === 'class' ? 'bg-blue-500' :
+                  item.type === 'break' ? 'bg-green-500' : 'bg-gray-300'
+                }`} />
+                <div className="flex-1 pt-0.5">
+                  <p className="text-sm font-medium text-gray-900">{item.event}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Recent Activities */}
+        <div className="bg-white p-6 rounded-xl border border-gray-200">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-lg font-semibold text-gray-900">Recent Activities</h2>
+            <Bell className="h-5 w-5 text-gray-500" />
+          </div>
+          <div className="space-y-4">
+            {(dashboardData.activities?.activities || []).map((activity: Activity, index: number) => (
+              <div key={index} className="flex items-start p-3 bg-gray-50 rounded-lg">
+                <Award className="h-5 w-5 text-purple-500" />
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-gray-900">{activity.activity_name}</p>
+                  <p className="text-xs text-gray-400 mt-1">Today</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
     </div>
   );
-
-  return isIndexRoute ? renderOverview() : <Outlet />;
 };
 
 export default ParentDashboard;
