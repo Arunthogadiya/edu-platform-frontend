@@ -669,7 +669,7 @@ const EduPal: React.FC = () => {
             </div>
             <button
               onClick={() => setIsMinimized(!isMinimized)}
-              className="p-1.5 rounded-lg text-white/80 hover:text-white hover:bg-white/10 transition-colors"
+              className="p-1.5 rounded-lg bg-white/20 text-white hover:bg-white/30 transition-colors"
             >
               {isMinimized ? <Maximize2 size={16} /> : <Minimize2 size={16} />}
             </button>

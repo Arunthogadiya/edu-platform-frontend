@@ -13,6 +13,7 @@ interface BehaviorRecord {
 }
 
 interface DashboardData {
+  studentName?: string;
   grades?: any;
   attendance?: any;
   activities?: {
@@ -41,6 +42,7 @@ const ParentDashboard: React.FC = () => {
       try {
         // Get mock data directly
         const data = {
+          studentName: "John Smith", // Add mock student name
           grades: dashboardService.getMockGrades(),
           attendance: dashboardService.getMockAttendance(),
           activities: dashboardService.getMockActivities(),
@@ -73,6 +75,11 @@ const ParentDashboard: React.FC = () => {
 
   return (
     <div className="p-8">
+      {/* Student Name Header */}
+      <div className="mb-8">
+        <h1 className="text-2xl font-bold text-gray-900">{dashboardData.studentName}'s Education Portal</h1>
+      </div>
+
       {/* Quick Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <div className="bg-purple-50 p-6 rounded-xl border border-purple-100 hover:shadow-md transition-shadow">
