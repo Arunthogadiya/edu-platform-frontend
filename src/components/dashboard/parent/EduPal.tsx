@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Bot, Send, Mic, StopCircle, Minimize2, Maximize2, GraduationCap, Calendar, AlertCircle, HelpCircle, ExternalLink } from 'lucide-react';
+import { Bot, Send, Mic, StopCircle, Minimize2, Maximize2, GraduationCap, Calendar, AlertCircle, HelpCircle, ExternalLink, Upload, X } from 'lucide-react';
 import { chatbotService } from '../../../services/chatbotService';
 import { useLocation } from 'react-router-dom';
 import { notificationService } from '../../../services/notificationService';
@@ -12,12 +12,20 @@ interface Message {
   content: string;
   timestamp: Date;
   resources?: string[];
+  attachments?: UploadedDocument[];
 }
 
 interface QuickAccessItem {
   route: string;
   questions: string[];
   hint: string;
+}
+
+interface UploadedDocument {
+  id: string;
+  name: string;
+  size: number;
+  type: string;
 }
 
 const QUICK_ACCESS: Record<string, QuickAccessItem> = {
@@ -151,6 +159,12 @@ const EduPal: React.FC = () => {
     type: 'smart' | 'context' | 'time';
     icon?: string;
   } | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB in bytes
 
   useEffect(() => {
     loadChatHistory();
@@ -317,6 +331,82 @@ const EduPal: React.FC = () => {
     setInputText(text);
     handleSubmit(new Event('submit') as any);
   };
+
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > MAX_FILE_SIZE) {
+      alert('File size must be less than 5MB');
+      return;
+    }
+
+    setSelectedFile(file);
+  };
+
+  const handleFileUpload = async () => {
+    if (!selectedFile) return;
+
+    setIsUploading(true);
+    setUploadProgress(0);
+
+    try {
+      // Simulate file upload progress
+      for (let i = 0; i <= 100; i += 10) {
+        await new Promise(resolve => setTimeout(resolve, 200));
+        setUploadProgress(i);
+      }
+
+      // Create a message with the document
+      const newMessage: Message = {
+        id: Date.now().toString(),
+        type: 'user',
+        content: `I've uploaded ${selectedFile.name}. Can you help me with this document?`,
+        timestamp: new Date(),
+        attachments: [{
+          id: Date.now().toString(),
+          name: selectedFile.name,
+          size: selectedFile.size,
+          type: selectedFile.type
+        }]
+      };
+
+      setMessages(prev => [...prev, newMessage]);
+      setSelectedFile(null);
+      
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    } catch (error) {
+      console.error('Error uploading file:', error);
+      alert('Failed to upload file. Please try again.');
+    } finally {
+      setIsUploading(false);
+      setUploadProgress(0);
+    }
+  };
+
+  const renderFileUploadUI = () => (
+    <>
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={handleFileSelect}
+        accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+        className="hidden"
+      />
+      <button
+        type="button"
+        onClick={() => fileInputRef.current?.click()}
+        className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+        title="Upload document"
+        disabled={isUploading}
+      >
+        <Upload className="h-5 w-5" />
+      </button>
+    </>
+  );
 
   // Keyboard shortcut handler
   const handleKeyPress = useCallback((event: KeyboardEvent) => {
@@ -727,6 +817,7 @@ const EduPal: React.FC = () => {
                       }`}
                     >
                       <p className="text-sm">{message.content}</p>
+                      {/* Fix the resources section */}
                       {message.resources && message.resources.length > 0 && (
                         <div className="mt-2 space-y-1">
                           {message.resources.map((resource, index) => (
@@ -764,6 +855,44 @@ const EduPal: React.FC = () => {
 
               {/* Input Area */}
               <form onSubmit={handleSubmit} className="p-3 bg-white/50 backdrop-blur-sm border-t">
+                {/* File upload progress */}
+                {isUploading && (
+                  <div className="mb-2">
+                    <div className="h-1 w-full bg-gray-200 rounded">
+                      <div 
+                        className="h-1 bg-blue-600 rounded transition-all duration-300"
+                        style={{ width: `${uploadProgress}%` }}
+                      />
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">Uploading document... {uploadProgress}%</p>
+                  </div>
+                )}
+                
+                {/* Selected file indicator */}
+                {selectedFile && !isUploading && (
+                  <div className="mb-2 flex items-center justify-between bg-blue-50 px-3 py-2 rounded-lg">
+                    <div className="flex items-center space-x-2">
+                      <Upload className="h-4 w-4 text-blue-600" />
+                      <span className="text-xs text-blue-700 truncate max-w-[200px]">
+                        {selectedFile.name}
+                      </span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <span className="text-xs text-blue-600">
+                        {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedFile(null)}
+                        className="text-blue-700 hover:text-blue-900 p-1"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Input controls */}
                 <div className="flex items-center space-x-2">
                   <button
                     type="button"
@@ -774,26 +903,31 @@ const EduPal: React.FC = () => {
                         : 'bg-blue-100 text-blue-600 hover:bg-blue-200'
                     } hover:shadow-md`}
                     title={isRecording ? "Stop recording" : "Start voice command"}
+                    disabled={isUploading}
                   >
                     {isRecording ? <StopCircle className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
                   </button>
-                  <input
-                    type="text"
-                    value={inputText}
-                    onChange={(e) => setInputText(e.target.value)}
-                    placeholder="Ask about grades, attendance, or homework..."
-                    className="flex-1 p-3 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    disabled={isLoading || isRecording}
-                  />
-                  <button
-                    type="submit"
-                    disabled={!inputText.trim() || isLoading}
-                    className="p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 
-                      transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed
-                      hover:shadow-md active:scale-95"
-                  >
-                    <Send className="h-5 w-5" />
-                  </button>
+                  {renderFileUploadUI()}
+                  <div className="flex-1 flex items-center space-x-2">
+                    <input
+                      type="text"
+                      value={inputText}
+                      onChange={(e) => setInputText(e.target.value)}
+                      placeholder="Ask about grades, attendance, or homework..."
+                      className="flex-1 p-3 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      disabled={isLoading || isRecording || isUploading}
+                    />
+                    <button
+                      type={selectedFile ? "button" : "submit"}
+                      onClick={selectedFile ? handleFileUpload : undefined}
+                      disabled={selectedFile ? false : (!inputText.trim() || isLoading || isUploading)}
+                      className="p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 
+                        transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed
+                        hover:shadow-md active:scale-95 flex-shrink-0"
+                    >
+                      {selectedFile ? <Upload className="h-5 w-5" /> : <Send className="h-5 w-5" />}
+                    </button>
+                  </div>
                 </div>
               </form>
             </>
