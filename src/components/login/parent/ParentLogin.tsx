@@ -4,40 +4,37 @@ import { useNavigate } from 'react-router-dom';
 import { LoginForm } from '../../auth/LoginForm';
 import { RegisterForm } from '../../auth/RegisterForm';
 import { useTranslation } from 'react-i18next';
+import { authService } from '../../../services/authService';
 
 const ParentLogin = () => {
   const [loginSuccess, setLoginSuccess] = useState(false);
-  const [userData, setUserData] = useState<any>(null);
   const navigate = useNavigate();
   const { t } = useTranslation();
   const isRegistration = window.location.pathname.includes('/register');
   
   useEffect(() => {
-    // Check if already logged in
-    const token = localStorage.getItem('token');
-    const existingUserData = localStorage.getItem('userData');
-    if (token && existingUserData) {
-      navigate('/parent/dashboard');
+    // Check if already logged in - with safe parsing
+    try {
+      if (authService.isAuthenticated()) {
+        const user = authService.getCurrentUser();
+        if (user?.role === 'parent') {
+          navigate('/parent/dashboard');
+        } else {
+          // Clear invalid session
+          authService.logout();
+        }
+      }
+    } catch (error) {
+      console.error('Error checking auth state:', error);
+      authService.logout(); // Clear potentially corrupted data
     }
   }, [navigate]);
 
-  useEffect(() => {
-    if (loginSuccess && userData) {
-      // Store auth token and user data
-      localStorage.setItem('token', userData.token);
-      localStorage.setItem('userData', JSON.stringify(userData));
-      
-      const timer = setTimeout(() => {
-        navigate('/parent/dashboard');
-      }, 1500);
-      
-      return () => clearTimeout(timer);
-    }
-  }, [loginSuccess, userData, navigate]);
-
-  const handleAuthSuccess = (data: any) => {
-    setUserData(data);
+  const handleAuthSuccess = async (data: any) => {
     setLoginSuccess(true);
+    setTimeout(() => {
+      navigate('/parent/dashboard');
+    }, 1500);
   };
 
   return (

@@ -1,17 +1,23 @@
-import { FC, ReactNode } from 'react';
-import { Navigate } from 'react-router-dom';
+import React from 'react';
+import { Navigate, useLocation } from 'react-router-dom';
+import { authService } from '../../services/authService';
 
-interface PrivateRouteProps {
-  children: ReactNode;
-}
+export const PrivateRoute: React.FC<{ children: React.ReactElement }> = ({ children }) => {
+  const location = useLocation();
+  const isAuthenticated = authService.isAuthenticated();
+  const user = authService.getCurrentUser();
 
-export const PrivateRoute: FC<PrivateRouteProps> = ({ children }) => {
-  const token = localStorage.getItem('token');
-  const userData = JSON.parse(localStorage.getItem('userData') || 'null');
-
-  if (!token || !userData) {
-    return <Navigate to="/select-role" replace />;
+  if (!isAuthenticated || !user) {
+    return <Navigate to="/select-role" state={{ from: location }} replace />;
   }
 
-  return <>{children}</>;
+  // Ensure user is accessing the correct dashboard based on their role
+  const correctPath = user.role === 'parent' ? '/parent/dashboard' : '/teacher/dashboard';
+  const isCorrectPath = location.pathname.startsWith(correctPath);
+
+  if (!isCorrectPath) {
+    return <Navigate to={correctPath} replace />;
+  }
+
+  return children;
 };

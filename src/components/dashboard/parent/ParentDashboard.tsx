@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Outlet, useMatch } from 'react-router-dom';
 import { Book, Bell, Calendar, MessageSquare, TrendingUp, Clock, Activity, Award } from 'lucide-react';
 import { dashboardService } from '../../../services/dashboardService';
+import { authService } from '../../../services/authService';
 
 interface Activity {
   activity_name: string;
@@ -14,7 +15,22 @@ interface BehaviorRecord {
 
 interface DashboardData {
   studentName?: string;
-  grades?: any;
+  studentId?: number;
+  grades?: {
+    students: Array<{
+      student_id: number;
+      student_name: string;
+      gender: string;
+      subjects: Array<{
+        subject: string;
+        grades: Array<{
+          date: string;
+          grade: string;
+        }>;
+        alert: boolean;
+      }>;
+    }>;
+  };
   attendance?: any;
   activities?: {
     activities: Activity[];
@@ -36,21 +52,34 @@ const ParentDashboard: React.FC = () => {
   const isIndexRoute = useMatch('/parent/dashboard');
   const [dashboardData, setDashboardData] = useState<DashboardData>({});
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const loadDashboardData = async () => {
       try {
-        // Get mock data directly
-        const data = {
-          studentName: "John Smith", // Add mock student name
-          grades: dashboardService.getMockGrades(),
-          attendance: dashboardService.getMockAttendance(),
-          activities: dashboardService.getMockActivities(),
-          behavior: dashboardService.getMockBehavior()
+        setIsLoading(true);
+        const user = authService.getCurrentUser();
+        if (!user) {
+          throw new Error('User data not found');
+        }
+
+        const gradesResponse = await dashboardService.fetchGrades(user.id, new Date().toISOString());
+        
+        // Get data for the specific user
+        const data: DashboardData = {
+          studentName: gradesResponse.students[0]?.student_name || user.studentName || "Student",
+          studentId: gradesResponse.students[0]?.student_id || user.id,
+          grades: gradesResponse,
+          attendance: await dashboardService.fetchAttendance(user.id, new Date().toISOString()),
+          activities: await dashboardService.fetchActivities(user.id),
+          behavior: await dashboardService.fetchBehavior(user.id)
         };
+        
         setDashboardData(data);
+        setError(null);
       } catch (error) {
         console.error('Error loading dashboard data:', error);
+        setError('Failed to load dashboard data');
       } finally {
         setIsLoading(false);
       }
@@ -60,6 +89,10 @@ const ParentDashboard: React.FC = () => {
       loadDashboardData();
     }
   }, [isIndexRoute]);
+
+  if (error) {
+    return <div className="p-4 text-red-500">{error}</div>;
+  }
 
   if (!isIndexRoute) {
     return <Outlet />;
@@ -72,6 +105,26 @@ const ParentDashboard: React.FC = () => {
       </div>
     );
   }
+
+  const getLatestGrade = () => {
+    const student = dashboardData.grades?.students[0];
+    if (!student?.subjects?.length) return 'N/A';
+
+    let latestGrade = '';
+    let latestDate = new Date(0);
+
+    student.subjects.forEach(subject => {
+      subject.grades.forEach(grade => {
+        const gradeDate = new Date(grade.date);
+        if (gradeDate > latestDate) {
+          latestDate = gradeDate;
+          latestGrade = grade.grade;
+        }
+      });
+    });
+
+    return latestGrade || 'N/A';
+  };
 
   return (
     <div className="p-8">
@@ -116,8 +169,8 @@ const ParentDashboard: React.FC = () => {
             <h3 className="text-lg font-semibold text-yellow-900">Performance</h3>
             <Award className="h-6 w-6 text-yellow-500" />
           </div>
-          <p className="text-2xl font-bold text-yellow-700">A+</p>
-          <p className="text-sm text-yellow-600 mt-1">Overall grade</p>
+          <p className="text-2xl font-bold text-yellow-700">{getLatestGrade()}</p>
+          <p className="text-sm text-yellow-600 mt-1">Latest grade</p>
         </div>
       </div>
 

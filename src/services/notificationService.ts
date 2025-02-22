@@ -1,3 +1,5 @@
+import api from './apiConfig';
+
 interface EducationUpdate {
   type: 'grade' | 'attendance' | 'behavior' | 'homework' | 'event';
   priority: 'high' | 'medium' | 'low';
@@ -30,6 +32,14 @@ const DUMMY_NOTIFICATIONS = [
   }
 ] as EducationUpdate[];
 
+interface Notification {
+  id: string;
+  type: 'alert' | 'info' | 'success' | 'warning';
+  message: string;
+  timestamp: Date;
+  read: boolean;
+}
+
 class NotificationService {
   private lastUpdateCheck: number = 0;
   private updateInterval: number = 30000; // 30 seconds
@@ -46,8 +56,8 @@ class NotificationService {
   }
 
   async getImportantUpdates(childId: number, force: boolean = false): Promise<EducationUpdate[]> {
-    // Return dummy data immediately
-    return this.cachedUpdates;
+    const response = await api.get(`/students/${childId}/updates`);
+    return [];
   }
 
   generateNotificationMessage(update: EducationUpdate): string {
@@ -98,11 +108,60 @@ class NotificationService {
         return hoursSinceUpdate <= 6; // Default to 6 hours
     }
   }
+
+  async getNotifications(): Promise<Notification[]> {
+    try {
+      // Mock data for development
+      return [
+        {
+          id: '1',
+          type: 'info',
+          message: 'New assignment posted in Mathematics',
+          timestamp: new Date(),
+          read: false
+        }
+      ];
+
+      // TODO: Implement actual API call
+      // return await api.get('/notifications');
+    } catch (error) {
+      console.error('Error fetching notifications:', error);
+      throw error;
+    }
+  }
+
+  async markAsRead(notificationId: string): Promise<void> {
+    try {
+      // TODO: Implement actual API call
+      // await api.put(`/notifications/${notificationId}/read`);
+    } catch (error) {
+      console.error('Error marking notification as read:', error);
+      throw error;
+    }
+  }
+
+  async checkSmartSuggestions(): Promise<any[]> {
+    try {
+      // Mock data for development
+      return [
+        {
+          type: 'study',
+          message: 'Based on recent performance, extra practice in Mathematics might be helpful'
+        }
+      ];
+
+      // TODO: Implement actual API call
+      // return await api.get('/notifications/suggestions');
+    } catch (error) {
+      console.error('Error checking suggestions:', error);
+      throw error;
+    }
+  }
 }
 
 export const notificationService = new NotificationService();
 
 export const fetchNotifications = async (userId: string | undefined) => {
-  // Return dummy notifications without API call
-  return { notifications: DUMMY_NOTIFICATIONS };
+  const response = await api.get(`/users/${userId}/notifications`);
+  return response.data;
 };

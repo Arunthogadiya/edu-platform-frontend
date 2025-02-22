@@ -1,80 +1,65 @@
+import api from './apiConfig';
+
 class CommunityService {
   async getForums() {
-    // Return mock forum data
-    return {
-      threads: [
-        {
-          id: '1',
-          title: 'Tips for helping with math homework',
-          description: 'Looking for advice on how to help my child with algebra',
-          author: 'Sarah P.',
-          replies: 12,
-          likes: 24,
-          date: '2 hours ago'
-        },
-        {
-          id: '2',
-          title: 'After-school activities recommendations',
-          description: 'What activities have worked well for your children?',
-          author: 'Michael R.',
-          replies: 8,
-          likes: 15,
-          date: '4 hours ago'
-        }
-      ]
-    };
+    const response = await api.get('/api/community/forums');
+    console.log('Raw API Response:', response); // Debug log
+    return response.data; // API returns { data: ForumThread[] }
+  }
+
+  async createForumThread({ title, content, language }: { title: string; content: string; language: string }) {
+    const response = await api.post('/api/community/forums', {
+      title,
+      content,
+      language
+    });
+    return response.data;
   }
 
   async getPolls() {
-    // Return mock poll data
-    return {
-      polls: [
-        {
-          id: '1',
-          question: 'How much time does your child spend on homework daily?',
-          options: ['Less than 1 hour', '1-2 hours', '2-3 hours', 'More than 3 hours'],
-          votes: [12, 24, 8, 4],
-          total_votes: 48
-        },
-        {
-          id: '2',
-          question: 'What subject does your child find most challenging?',
-          options: ['Math', 'Science', 'English', 'History'],
-          votes: [30, 15, 10, 8],
-          total_votes: 63
-        }
-      ]
-    };
+    const response = await api.get('/api/community/polls');
+    console.log('Raw Polls Response:', response.data); // Debug log
+    return response.data;
   }
 
-  async createForumThread({ title, content }: { title: string; content: string }) {
-    // Mock create thread
-    return {
-      thread_id: Date.now().toString(),
-      success: true
-    };
+  async createPoll({ question, options, parent_id }: { question: string; options: string[]; parent_id: number }) {
+    if (!question.trim() || !options || options.length < 2) {
+      throw new Error('Invalid poll data');
+    }
+    
+    // Send options directly as array, no JSON.stringify needed
+    const response = await api.post('/api/community/polls', {
+      question,
+      options: options, // Send as plain array
+      parent_id
+    });
+    console.log('Creating poll with data:', { question, options, parent_id }); // Debug log
+    return response.data;
   }
 
   async submitVote(pollId: string, selectedOption: string) {
-    // Mock vote submission
-    return {
-      message: 'Vote recorded successfully'
-    };
+    const response = await api.post('/api/community/polls', {
+      poll_id: pollId,
+      selected_option: selectedOption,
+      // Add other required fields if needed by your API
+      parent_id: 2
+    });
+    return response.data;
   }
 
-  async createPoll({ question, options }: { question: string; options: string[] }) {
-    // Mock create poll
-    return {
-      poll_id: Date.now().toString(),
-      success: true,
-      poll: {
-        id: Date.now().toString(),
-        question,
-        options,
-        votes: Array(options.length).fill(0),
-        total_votes: 0
-      }
-    };
+  async createReply(threadId: number, content: string, language: string = 'en') {
+    const response = await api.post(`/api/community/forums/${threadId}/replies`, {
+      thread_id: threadId,
+      content: content,
+      is_reply: true,
+      language: language
+    });
+    return response.data;
+  }
+
+  async getThreadReplies(threadId: number) {
+    const response = await api.get(`/api/community/forums/${threadId}/replies`);
+    return response.data;
   }
 }
 

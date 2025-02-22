@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Bot, Send, Mic, StopCircle, Minimize2, Maximize2, GraduationCap, Calendar, AlertCircle, HelpCircle, ExternalLink, Upload, X } from 'lucide-react';
 import { chatbotService } from '../../../services/chatbotService';
 import { useLocation } from 'react-router-dom';
-import { notificationService } from '../../../services/notificationService';
 import SmartReminderManager from '../../../services/SmartReminderManager';
 import './EduPal.css';
 
@@ -135,6 +134,27 @@ How can I help you today?`,
   resources: []
 };
 
+const generateStaticSuggestions = (pathname: string) => {
+  if (pathname.includes('academics')) {
+    return {
+      text: "Would you like to check recent academic performance?",
+      type: 'smart' as const,
+      icon: '📚'
+    };
+  } else if (pathname.includes('attendance')) {
+    return {
+      text: "Want to review this month's attendance?",
+      type: 'smart' as const,
+      icon: '📅'
+    };
+  }
+  return {
+    text: "How can I help you today?",
+    type: 'smart' as const,
+    icon: '💡'
+  };
+};
+
 const EduPal: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState('');
@@ -191,29 +211,6 @@ const EduPal: React.FC = () => {
       return () => clearTimeout(timer);
     }
   }, [location.pathname]);
-
-  useEffect(() => {
-    const checkUpdates = async () => {
-      const updates = await notificationService.getImportantUpdates(userData?.childId);
-      if (updates.length > 0) {
-        const latestUpdate = updates[0];
-        setSmartSuggestion(
-          `Would you like to know more about ${
-            latestUpdate.type === 'grade' ? 'the new grade in ' + latestUpdate.data.subject :
-            latestUpdate.type === 'attendance' ? 'today\'s attendance' :
-            latestUpdate.type === 'homework' ? 'pending homework' :
-            'recent updates'
-          }?`
-        );
-        setPulseAnimation(true);
-        setTimeout(() => setPulseAnimation(false), 5000);
-      }
-    };
-
-    checkUpdates();
-    const interval = setInterval(checkUpdates, 60000);
-    return () => clearInterval(interval);
-  }, [userData?.childId]);
 
   useEffect(() => {
     // Show welcome message on first load
@@ -593,6 +590,15 @@ const EduPal: React.FC = () => {
       clearInterval(smartInterval);
     };
   }, [location.pathname, userData?.childId]);
+
+  useEffect(() => {
+    if (!isOpen) {
+      const suggestion = generateStaticSuggestions(location.pathname);
+      setActiveSuggestion(suggestion);
+      setPulseAnimation(true);
+      setTimeout(() => setPulseAnimation(false), 5000);
+    }
+  }, [location.pathname, isOpen]);
 
   const renderSuggestionBubble = () => {
     if (!activeSuggestion || isOpen) return null;

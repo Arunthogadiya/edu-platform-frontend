@@ -6,14 +6,16 @@ import VoiceQuery from '../parent/VoiceQuery';
 
 interface DashboardLayoutProps {
   children?: React.ReactNode;
+  userType: 'parent' | 'teacher';
 }
 
-const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
+const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, userType }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const navigate = useNavigate();
   const location = useLocation();
-  const userData = JSON.parse(localStorage.getItem('userData') || 'null');  // Changed from sessionStorage to localStorage
+  const userData = JSON.parse(localStorage.getItem('userData') || 'null');
+  const isTeacherDashboard = userType === 'teacher';
 
   // Handle window resize
   useEffect(() => {
@@ -57,7 +59,55 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
     }
   };
 
-  const menuItems = [
+  const menuItems = isTeacherDashboard ? [
+    { 
+      id: 'dashboard', 
+      icon: Home, 
+      label: 'Home', 
+      description: 'Back to main dashboard', 
+      path: '/teacher/dashboard',
+      color: 'text-blue-600',
+      bgColor: 'hover:bg-blue-50'
+    },
+    // Only show relevant menu items for teachers
+    { 
+      id: 'academics', 
+      icon: GraduationCap, 
+      label: 'Student Performance', 
+      description: 'Track academic progress', 
+      path: '/teacher/dashboard/performance',
+      color: 'text-purple-600',
+      bgColor: 'hover:bg-purple-50'
+    },
+    { 
+      id: 'attendance', 
+      icon: Calendar, 
+      label: 'Attendance', 
+      description: 'Manage attendance', 
+      path: '/teacher/dashboard/attendance',
+      color: 'text-green-600',
+      bgColor: 'hover:bg-green-50'
+    },
+    { 
+      id: 'messages', 
+      icon: MessageSquare, 
+      label: 'Communication', 
+      description: 'Messages & announcements', 
+      path: '/teacher/dashboard/communication',
+      color: 'text-yellow-600',
+      bgColor: 'hover:bg-yellow-50'
+    },
+    { 
+      id: 'behavior', 
+      icon: Brain, 
+      label: 'Behavior Tracking', 
+      description: 'Monitor student behavior', 
+      path: '/teacher/dashboard/behavior',
+      color: 'text-rose-600',
+      bgColor: 'hover:bg-rose-50'
+    }
+  ] : [
+    // Original parent menu items
     { 
       id: 'dashboard', 
       icon: Home, 
@@ -67,6 +117,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
       color: 'text-blue-600',
       bgColor: 'hover:bg-blue-50'
     },
+    // ...rest of the existing parent menu items...
     { 
       id: 'academics', 
       icon: GraduationCap, 
@@ -134,7 +185,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
 
   return (
     <DashboardErrorBoundary>
-      <div className="min-h-screen bg-gray-50">
+      <div className="h-screen w-screen overflow-hidden bg-gray-50">
         {/* Fixed Top Navbar */}
         <nav className="bg-gradient-to-r from-blue-600 to-blue-700 shadow-lg fixed w-full z-50">
           <div className="max-w-8xl mx-auto flex items-center justify-between h-16">
@@ -234,18 +285,18 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
 
         {/* Main Content */}
         <main 
-          className={`pt-16 transition-all duration-300 ease-in-out
-            ${isMobile ? '' : (isSidebarOpen ? 'md:ml-72' : 'md:ml-20')}`}
+          className={`fixed top-16 right-0 bottom-0 overflow-auto bg-gray-50 transition-all duration-300 ease-in-out
+            ${isMobile ? 'left-0' : (isSidebarOpen ? 'left-72' : 'left-20')}`}
         >
-          <div className="max-w-7xl mx-auto p-6">
-            <div className="bg-white rounded-xl shadow-sm">
+          <div className="h-full w-full p-4">
+            <div className="bg-white rounded-xl shadow-sm h-full w-full">
               {children}
             </div>
           </div>
         </main>
 
         {/* Voice Query Component */}
-        <VoiceQuery onQueryResult={handleVoiceQueryResult} />
+        {userType === 'parent' && <VoiceQuery onQueryResult={handleVoiceQueryResult} />}
       </div>
     </DashboardErrorBoundary>
   );

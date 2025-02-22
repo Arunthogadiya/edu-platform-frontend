@@ -1,9 +1,10 @@
 import axios from 'axios';
+import api from './apiConfig';
 import { mockGradesData } from '../data/mockGradesData';
 import { MockDataProvider } from '../utils/mockDataProvider';
 import type { Grade, SubjectGrades } from '../data/mockGradesData';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://192.168.0.100:5000/edu-platform/v1';
 
 interface GradeData {
   subject: string;
@@ -38,6 +39,98 @@ interface BehaviorData {
   }>;
 }
 
+interface Grade {
+  date: string;
+  grade: string;
+}
+
+interface Subject {
+  subject: string;
+  grades: Grade[];
+  alert: boolean;
+}
+
+interface Student {
+  student_id: number;
+  student_name: string;
+  gender: string;
+  subjects: Subject[];
+}
+
+interface GradesResponse {
+  students: Student[];
+}
+
+interface AttendanceRecord {
+  date: string;
+  status: 'present' | 'absent';
+}
+
+interface StudentAttendance {
+  student_id: number;
+  student_name: string;
+  gender: string;
+  attendance: AttendanceRecord[];
+}
+
+interface AttendanceResponse {
+  students: StudentAttendance[];
+}
+
+interface TimeTableEntry {
+  id: number;
+  class_value: string;
+  section: string;
+  day_of_week: string;
+  start_time: string;
+  end_time: string;
+  subject: string;
+  teacher_id: number;
+}
+
+interface Activity {
+  activity_name: string;
+  badge: string;
+  description: string;
+}
+
+interface StudentActivities {
+  student_id: number;
+  student_name: string;
+  gender: string;
+  activities: Activity[];
+}
+
+interface ActivitiesResponse {
+  students: StudentActivities[];
+}
+
+interface BehaviorRecord {
+  behavior_type: string;
+  comment: string;
+  date: string;
+  sentiment_score: string;
+}
+
+interface StudentBehavior {
+  student_id: number;
+  student_name: string;
+  gender: string;
+  behavior_records: BehaviorRecord[];
+}
+
+interface BehaviorResponse {
+  students: StudentBehavior[];
+}
+
+interface Teacher {
+  id: number;
+  name: string;
+  email: string;
+  role: string;
+  subject: string | null;
+}
+
 const handleApiResponse = async (response: Response) => {
   if (!response.ok) {
     throw new Error(`HTTP error! status: ${response.status}`);
@@ -52,154 +145,99 @@ const handleApiResponse = async (response: Response) => {
 };
 
 class DashboardService {
-  private baseUrl = import.meta.env.VITE_API_URL || '/api';
-  // Force using mock data
-  private useMockData = true;
-
-  async fetchGrades(childId: number, startDate: string): Promise<{ subjects: SubjectGrades[] }> {
-    // Always return mock data
-    const response = await MockDataProvider.getMockResponse(mockGradesData);
-    return response.data || { subjects: [] };
+  async fetchGrades(userId: string | number, date?: string): Promise<GradesResponse> {
+    try {
+      const response = await api.get(`/api/dashboard/grades`, {
+        params: { date }
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching grades:', error);
+      throw error;
+    }
   }
 
-  async fetchAttendance(childId: number, month: string): Promise<{ attendance: AttendanceData[] }> {
-    // Always return mock data
-    return this.getMockAttendance();
+  async fetchAttendance(userId: string | number, date?: string) {
+    try {
+      const response = await api.get(`/api/dashboard/attendance`, {
+        params: { date }
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching attendance:', error);
+      throw error;
+    }
   }
 
-  async fetchActivities(childId: number): Promise<{ activities: ActivityData[] }> {
-    // Always return mock data
-    return this.getMockActivities();
+  async fetchActivities(userId: string | number) {
+    try {
+      const response = await api.get(`/api/dashboard/activities`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching activities:', error);
+      throw error;
+    }
   }
 
-  async fetchBehavior(childId: number): Promise<BehaviorData> {
-    // Always return mock data
-    return this.getMockBehavior();
+  async fetchBehavior(userId: string | number) {
+    try {
+      const response = await api.get(`/api/dashboard/behaviour`);
+      console.log('Behavior response:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching behavior:', error);
+      throw error;
+    }
   }
 
-  // Mock data methods for development/demo purposes
-  getMockGrades() {
-    return {
-      subjects: [
-        {
-          subject: 'Mathematics',
-          averageScore: 85,
-          grades: [
-            { score: 88, assignment: 'Algebra Quiz', date: new Date().toISOString() },
-            { score: 92, assignment: 'Geometry Test', date: new Date().toISOString() },
-            { score: 85, assignment: 'Trigonometry Quiz', date: new Date().toISOString() }
-          ],
-          trend: 'up'
-        },
-        {
-          subject: 'Science',
-          averageScore: 90,
-          grades: [
-            { score: 95, assignment: 'Chemistry Lab', date: new Date().toISOString() },
-            { score: 88, assignment: 'Physics Test', date: new Date().toISOString() },
-            { score: 87, assignment: 'Biology Quiz', date: new Date().toISOString() }
-          ],
-          trend: 'stable'
-        },
-        {
-          subject: 'English',
-          averageScore: 88,
-          grades: [
-            { score: 85, assignment: 'Essay Writing', date: new Date().toISOString() },
-            { score: 90, assignment: 'Literature Analysis', date: new Date().toISOString() },
-            { score: 89, assignment: 'Comprehension Test', date: new Date().toISOString() }
-          ],
-          trend: 'up'
-        },
-        {
-          subject: 'History',
-          averageScore: 82,
-          grades: [
-            { score: 78, assignment: 'World War II Essay', date: new Date().toISOString() },
-            { score: 84, assignment: 'Civil Rights Movement', date: new Date().toISOString() },
-            { score: 84, assignment: 'Ancient Civilizations', date: new Date().toISOString() }
-          ],
-          trend: 'down'
+  async fetchTimeTable(): Promise<TimeTableEntry[]> {
+    try {
+      const response = await api.get('/api/dashboard/timetable');
+      console.log('Timetable response:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching timetable:', error);
+      throw new Error('Failed to fetch timetable');
+    }
+  }
+
+  async fetchTeachers(): Promise<Teacher[]> {
+    try {
+      // Update the endpoint to match the backend API structure
+      const response = await api.get('/teachers');
+      console.log('Teachers response:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching teachers:', error);
+      throw new Error('Failed to fetch teachers data');
+    }
+  }
+
+  async fetchParents(teacherId: number) {
+    try {
+      const response = await api.get(`/parents`);
+      console.log('Parents list response:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching parents:', error);
+      throw new Error('Failed to fetch parents list');
+    }
+  }
+
+  async fetchStudents(class_value: string, section: string) {
+    try {
+      const response = await axios.get('/api/students', {
+        params: {
+          class_value,
+          section
         }
-      ]
-    };
-  }
-
-  private getMockAttendance(): { attendance: AttendanceData[] } {
-    const currentDate = new Date();
-    const daysInMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).getDate();
-    
-    return {
-      attendance: Array.from({ length: daysInMonth }, (_, i) => ({
-        date: new Date(currentDate.getFullYear(), currentDate.getMonth(), i + 1).toISOString().split('T')[0],
-        status: Math.random() > 0.1 ? 'present' : (Math.random() > 0.5 ? 'absent' : 'late'),
-        arrival_time: '08:45',
-        classes_attended: Math.floor(Math.random() * 2) + 5,
-        total_classes: 6
-      }))
-    };
-  }
-
-  private getMockActivities(): { activities: ActivityData[] } {
-    return {
-      activities: [
-        {
-          activity_name: 'Math Quiz Champion',
-          badge: '🏆',
-          date: new Date().toISOString().split('T')[0],
-          type: 'academic'
-        },
-        {
-          activity_name: 'Science Fair Participant',
-          badge: '🔬',
-          date: new Date().toISOString().split('T')[0],
-          type: 'academic'
-        },
-        {
-          activity_name: 'Sports Day Winner',
-          badge: '🏅',
-          date: new Date().toISOString().split('T')[0],
-          type: 'sports'
-        }
-      ]
-    };
-  }
-
-  private getMockBehavior(): BehaviorData {
-    return {
-      date: new Date().toISOString().split('T')[0],
-      behavior_records: [
-        {
-          type: 'Class Participation',
-          sentiment_score: 0.85,
-          notes: 'Active participation in class discussions'
-        },
-        {
-          type: 'Homework Completion',
-          sentiment_score: 0.95,
-          notes: 'Consistently submits homework on time'
-        },
-        {
-          type: 'Peer Interaction',
-          sentiment_score: 0.75,
-          notes: 'Works well in group activities'
-        }
-      ]
-    };
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching students:', error);
+      throw error;
+    }
   }
 }
 
 export const dashboardService = new DashboardService();
-
-// Replace API functions with mock data
-export const fetchAttendance = async (userId: string) => {
-  return dashboardService.getMockAttendance();
-};
-
-export const fetchActivities = async (userId: string) => {
-  return dashboardService.getMockActivities();
-};
-
-export const fetchBehavior = async (userId: string) => {
-  return dashboardService.getMockBehavior();
-};
