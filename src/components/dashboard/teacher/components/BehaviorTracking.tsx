@@ -1,189 +1,314 @@
-import React, { useState } from 'react';
-import { useTranslation } from 'react-i18next';
-import { mockStudents } from '@/data/dummyTeacherData';
+import React, { useState, useEffect } from 'react';
+import { behaviorService } from '@/services/behaviorService';
+import { useToast } from '@/components/ui/use-toast';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Card } from "@/components/ui/card";
+
+interface StudentBehavior {
+  behavior_type: string;
+  comment: string;
+  date: string;
+  sentiment_score: string;
+}
+
+interface Student {
+  student_id: number;
+  student_name: string;
+  gender: string;
+  behavior_records: StudentBehavior[];
+}
 
 const BehaviorTracking: React.FC = () => {
-  const { t } = useTranslation();
-  const [activeView, setActiveView] = useState<'individual' | 'class'>('class');
-  const [selectedStudent, setSelectedStudent] = useState<string | null>(null);
+  const { toast } = useToast();
+  const [students, setStudents] = useState<Student[]>([]);
+  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  const [currentClass, setCurrentClass] = useState('');
+  const [currentSection, setCurrentSection] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [behaviorForm, setBehaviorForm] = useState({
+    student_id: '',
+    observation_text: ''
+  });
 
-  const behaviorStats = mockStudents.reduce((acc, student) => {
-    student.behavior.forEach(record => {
-      acc[record.type] = (acc[record.type] || 0) + 1;
-      acc[record.category] = (acc[record.category] || 0) + 1;
-    });
-    return acc;
-  }, {} as Record<string, number>);
+  const classes = ['6', '7', '8', '9', '10'];
+  const sections = ['A', 'B', 'C'];
+
+  useEffect(() => {
+    if (currentClass && currentSection) {
+      loadStudents();
+    }
+  }, [currentClass, currentSection]); // Load data when class or section changes
+
+  const sortBehaviorsByDate = (behaviors: StudentBehavior[]) => {
+    return [...behaviors].sort((a, b) => 
+      new Date(b.date).getTime() - new Date(a.date).getTime()
+    );
+  };
+
+  const loadStudents = async () => {
+    if (!currentClass || !currentSection) {
+      toast({
+        title: "Required",
+        description: "Please select both class and section",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const response = await behaviorService.getClassAnalysis(currentClass, currentSection);
+      if (response?.students) {
+        setStudents(response.students);
+      }
+    } catch (error) {
+      console.error('Error loading students:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load students",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleBehaviorSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!behaviorForm.student_id || !behaviorForm.observation_text) {
+      toast({
+        title: "Required",
+        description: "Please fill in all fields",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const result = await behaviorService.logSchoolBehavior(behaviorForm);
+      if (result.success) {
+        toast({
+          title: "Success",
+          description: "Behavior observation logged successfully",
+        });
+        setBehaviorForm({
+          student_id: '',
+          observation_text: ''
+        });
+        // Reload students to show new behavior
+        await loadStudents();
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to log behavior",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const getSentimentColor = (score: string) => {
+    const numScore = parseFloat(score);
+    if (numScore > 0) return 'bg-green-50 border-green-200 text-green-700';
+    if (numScore < 0) return 'bg-red-50 border-red-200 text-red-700';
+    return 'bg-gray-50 border-gray-200 text-gray-700';
+  };
+
+  const StudentCard = ({ student }: { student: Student }) => {
+    const latestBehavior = student.behavior_records[0];
+    const totalBehaviors = student.behavior_records.length;
+    const positiveBehaviors = student.behavior_records.filter(b => parseFloat(b.sentiment_score) > 0).length;
+    
+    return (
+      <div 
+        onClick={() => setSelectedStudent(student)}
+        className="p-4 border rounded-lg bg-white shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+      >
+        <div className="flex justify-between items-start mb-3">
+          <h3 className="font-semibold text-lg">{student.student_name}</h3>
+          <span className="text-xs text-gray-500">
+            {totalBehaviors} observations
+          </span>
+        </div>
+
+        {latestBehavior ? (
+          <div className={`p-3 rounded-md border ${getSentimentColor(latestBehavior.sentiment_score)}`}>
+            <div className="flex justify-between items-start mb-1">
+              <span className="text-sm font-medium">{latestBehavior.behavior_type}</span>
+              <span className="text-xs">{new Date(latestBehavior.date).toLocaleDateString()}</span>
+            </div>
+            <p className="text-sm mt-1">{latestBehavior.comment}</p>
+          </div>
+        ) : (
+          <p className="text-sm text-gray-500">No behavior records yet</p>
+        )}
+
+        {totalBehaviors > 0 && (
+          <div className="mt-3 text-xs text-gray-500">
+            {Math.round((positiveBehaviors / totalBehaviors) * 100)}% positive behaviors
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const BehaviorsList = ({ behaviors }: { behaviors: StudentBehavior[] }) => (
+    <div className="space-y-3">
+      {sortBehaviorsByDate(behaviors).map((behavior, index) => (
+        <div 
+          key={index}
+          className={`p-3 rounded-md border ${getSentimentColor(behavior.sentiment_score)}`}
+        >
+          <div className="flex justify-between items-start mb-1">
+            <span className="font-medium">{behavior.behavior_type}</span>
+            <span className="text-sm text-gray-500">
+              {new Date(behavior.date).toLocaleDateString()}
+            </span>
+          </div>
+          <p className="text-sm mt-1">{behavior.comment}</p>
+        </div>
+      ))}
+    </div>
+  );
 
   return (
     <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">{t('teacher.behavior.title')}</h1>
-        <div className="flex gap-4">
-          <button
-            onClick={() => setActiveView('individual')}
-            className={`px-4 py-2 rounded ${
-              activeView === 'individual' ? 'bg-blue-600 text-white' : 'bg-gray-200'
-            }`}
-          >
-            {t('teacher.behavior.individualView')}
-          </button>
-          <button
-            onClick={() => setActiveView('class')}
-            className={`px-4 py-2 rounded ${
-              activeView === 'class' ? 'bg-blue-600 text-white' : 'bg-gray-200'
-            }`}
-          >
-            {t('teacher.behavior.classView')}
-          </button>
+      {/* Class and Section Selector */}
+      <div className="mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Class
+            </label>
+            <select
+              value={currentClass}
+              onChange={(e) => setCurrentClass(e.target.value)}
+              className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="">Select Class</option>
+              {classes.map((cls) => (
+                <option key={cls} value={cls}>Class {cls}th</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Section
+            </label>
+            <select
+              value={currentSection}
+              onChange={(e) => setCurrentSection(e.target.value)}
+              className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="">Select Section</option>
+              {sections.map((section) => (
+                <option key={section} value={section}>Section {section}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="flex items-end">
+            <button
+              onClick={loadStudents}
+              disabled={!currentClass || !currentSection || isLoading}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+            >
+              {isLoading ? (
+                <div className="flex items-center gap-2">
+                  <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
+                  Loading...
+                </div>
+              ) : (
+                'Load Students'
+              )}
+            </button>
+          </div>
         </div>
       </div>
 
-      {activeView === 'individual' && (
-        <div className="mb-6">
-          <select
-            value={selectedStudent || ''}
-            onChange={(e) => setSelectedStudent(e.target.value)}
-            className="px-4 py-2 border rounded"
-          >
-            <option value="">Select Student</option>
-            {mockStudents.map(student => (
-              <option key={student.id} value={student.id}>{student.name}</option>
-            ))}
-          </select>
+      {/* Loading State */}
+      {isLoading ? (
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-8 w-8 border-4 border-blue-500 border-t-transparent"></div>
         </div>
+      ) : (
+        <>
+          {/* Students Grid */}
+          {students.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {students.map(student => (
+                <StudentCard key={student.student_id} student={student} />
+              ))}
+            </div>
+          ) : (
+            <div className="text-center text-gray-500 py-8">
+              {currentClass && currentSection ? 
+                'No students found for selected class and section' : 
+                'Please select a class and section to view students'}
+            </div>
+          )}
+        </>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2">
-          <div className="bg-white rounded-lg shadow p-4">
-            <h2 className="text-lg font-semibold mb-4">
-              {activeView === 'individual' 
-                ? t('teacher.behavior.studentBehavior')
-                : t('teacher.behavior.classBehavior')}
-            </h2>
-            {activeView === 'class' ? (
-              <div className="space-y-6">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="p-4 bg-green-50 rounded">
-                    <p className="text-sm text-gray-600">Positive Behaviors</p>
-                    <p className="text-2xl font-bold text-green-600">{behaviorStats.positive || 0}</p>
-                  </div>
-                  <div className="p-4 bg-red-50 rounded">
-                    <p className="text-sm text-gray-600">Areas for Improvement</p>
-                    <p className="text-2xl font-bold text-red-600">{behaviorStats.negative || 0}</p>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  {mockStudents.map(student => (
-                    <div key={student.id} className="p-3 border rounded">
-                      <div className="flex justify-between items-start">
-                        <h3 className="font-medium">{student.name}</h3>
-                        <div className="flex gap-2">
-                          {student.behavior.slice(-2).map((record, idx) => (
-                            <span key={idx} className={`text-xs px-2 py-1 rounded-full ${
-                              record.type === 'positive' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                            }`}>
-                              {record.category}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ) : selectedStudent && (
-              <div className="space-y-4">
-                {mockStudents
-                  .find(s => s.id === selectedStudent)
-                  ?.behavior.map((record, idx) => (
-                    <div key={idx} className={`p-3 rounded ${
-                      record.type === 'positive' ? 'bg-green-50' : 'bg-red-50'
-                    }`}>
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <span className={`text-xs px-2 py-1 rounded-full ${
-                            record.type === 'positive' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                          }`}>
-                            {record.category}
-                          </span>
-                          <p className="mt-2">{record.description}</p>
-                        </div>
-                        <span className="text-sm text-gray-500">
-                          {new Date(record.date).toLocaleDateString()}
-                        </span>
-                      </div>
-                    </div>
-                  ))
-                }
-              </div>
-            )}
+      {/* Behavior Form */}
+      <div className="mt-6 p-4 bg-white rounded-lg shadow">
+        <h2 className="text-lg font-semibold mb-4">Log New Behavior</h2>
+        <form onSubmit={handleBehaviorSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium mb-1">Student</label>
+            <select
+              value={behaviorForm.student_id}
+              onChange={(e) => setBehaviorForm(prev => ({ ...prev, student_id: e.target.value }))}
+              className="w-full px-4 py-2 border rounded"
+            >
+              <option value="">Select Student</option>
+              {students.map(student => (
+                <option key={student.student_id} value={student.student_id}>
+                  {student.student_name}
+                </option>
+              ))}
+            </select>
           </div>
-          
-          <div className="mt-6 bg-white rounded-lg shadow p-4">
-            <h2 className="text-lg font-semibold mb-4">{t('teacher.behavior.patterns')}</h2>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-              <div className="p-3 bg-blue-50 rounded">
-                <p className="text-sm text-gray-600">Engagement</p>
-                <p className="text-xl font-bold text-blue-600">{behaviorStats.engagement || 0}</p>
-              </div>
-              <div className="p-3 bg-purple-50 rounded">
-                <p className="text-sm text-gray-600">Teamwork</p>
-                <p className="text-xl font-bold text-purple-600">{behaviorStats.teamwork || 0}</p>
-              </div>
-              <div className="p-3 bg-yellow-50 rounded">
-                <p className="text-sm text-gray-600">Leadership</p>
-                <p className="text-xl font-bold text-yellow-600">{behaviorStats.leadership || 0}</p>
-              </div>
-              <div className="p-3 bg-gray-50 rounded">
-                <p className="text-sm text-gray-600">Discipline</p>
-                <p className="text-xl font-bold text-gray-600">{behaviorStats.discipline || 0}</p>
-              </div>
-            </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Observation</label>
+            <textarea
+              value={behaviorForm.observation_text}
+              onChange={(e) => setBehaviorForm(prev => ({ ...prev, observation_text: e.target.value }))}
+              className="w-full px-4 py-2 border rounded"
+              rows={3}
+            />
           </div>
-        </div>
-
-        <div className="space-y-6">
-          <div className="bg-white rounded-lg shadow p-4">
-            <h2 className="text-lg font-semibold mb-4">{t('teacher.behavior.quickActions')}</h2>
-            <div className="space-y-3">
-              <button className="w-full px-4 py-2 text-left bg-gray-50 hover:bg-gray-100 rounded">
-                {t('teacher.behavior.recordIncident')}
-              </button>
-              <button className="w-full px-4 py-2 text-left bg-gray-50 hover:bg-gray-100 rounded">
-                {t('teacher.behavior.praiseStudent')}
-              </button>
-              <button className="w-full px-4 py-2 text-left bg-gray-50 hover:bg-gray-100 rounded">
-                {t('teacher.behavior.generateReport')}
-              </button>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg shadow p-4">
-            <h2 className="text-lg font-semibold mb-4">{t('teacher.behavior.recommendations')}</h2>
-            <div className="space-y-2 text-sm">
-              {activeView === 'class' ? (
-                <>
-                  <p>• Increase group activities to promote teamwork</p>
-                  <p>• Recognize and reward positive behaviors more frequently</p>
-                  <p>• Consider implementing peer mentoring program</p>
-                </>
-              ) : selectedStudent && (
-                mockStudents
-                  .find(s => s.id === selectedStudent)
-                  ?.behavior.slice(-1).map((record, idx) => (
-                    <p key={idx}>
-                      • {record.type === 'positive' 
-                          ? 'Continue encouraging ' 
-                          : 'Work on improving '}{record.category}
-                    </p>
-                  ))
-              )}
-            </div>
-          </div>
-        </div>
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            className="w-full px-4 py-2 bg-blue-600 text-white rounded disabled:opacity-50"
+          >
+            {isSubmitting ? 'Submitting...' : 'Submit Observation'}
+          </button>
+        </form>
       </div>
+
+      {/* Student Details Dialog */}
+      <Dialog open={!!selectedStudent} onOpenChange={() => setSelectedStudent(null)}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>{selectedStudent?.student_name}'s Behavior History</DialogTitle>
+          </DialogHeader>
+          {selectedStudent && (
+            <BehaviorsList behaviors={selectedStudent.behavior_records} />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

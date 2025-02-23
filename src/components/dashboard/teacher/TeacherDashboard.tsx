@@ -9,6 +9,8 @@ import BehaviorTracking from './components/BehaviorTracking';
 import Assessments from './components/Assessments';
 import LearningResources from './components/LearningResources';
 import DashboardOverview from './components/DashboardOverview';
+import ActivityTracking from './components/ActivityTracking';
+import EventsManagement from './components/EventsManagement';
 
 const TeacherDashboard: React.FC = () => {
   return (
@@ -20,8 +22,11 @@ const TeacherDashboard: React.FC = () => {
         <Route path="communication" element={<Communication />} />
         <Route path="calendar" element={<Calendar />} />
         <Route path="behavior" element={<BehaviorTracking />} />
+        <Route path="resources" element={<LearningResources />} />
         <Route path="assessments" element={<Assessments />} />
         <Route path="resources" element={<LearningResources />} />
+        <Route path="activities" element={<ActivityTracking />} />
+        <Route path="events" element={<EventsManagement />} />
       </Routes>
     </div>
   );

@@ -3,6 +3,7 @@ import { Outlet, useMatch } from 'react-router-dom';
 import { Book, Bell, Calendar, MessageSquare, TrendingUp, Clock, Activity, Award } from 'lucide-react';
 import { dashboardService } from '../../../services/dashboardService';
 import { authService } from '../../../services/authService';
+import { eventService, Event, Assessment } from '../../../services/eventService';
 
 interface Activity {
   activity_name: string;
@@ -51,6 +52,8 @@ const MOCK_TIMELINE = [
 const ParentDashboard: React.FC = () => {
   const isIndexRoute = useMatch('/parent/dashboard');
   const [dashboardData, setDashboardData] = useState<DashboardData>({});
+  const [upcomingEvents, setUpcomingEvents] = useState<Event[]>([]);
+  const [upcomingAssessments, setUpcomingAssessments] = useState<Assessment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -75,6 +78,12 @@ const ParentDashboard: React.FC = () => {
           behavior: await dashboardService.fetchBehavior(user.id)
         };
         
+        // Fetch upcoming events and assessments
+        const events = await eventService.getUpcomingEvents(user.class_value, user.section);
+        const assessments = await eventService.getUpcomingAssessments(user.class_value, user.section);
+
+        setUpcomingEvents(events);
+        setUpcomingAssessments(assessments);
         setDashboardData(data);
         setError(null);
       } catch (error) {
@@ -174,8 +183,8 @@ const ParentDashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* Recent Updates and Timeline */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      {/* Recent Updates, Timeline, and Events/Assessments */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
         {/* Timeline */}
         <div className="bg-white p-6 rounded-xl border border-gray-200">
           <div className="flex items-center justify-between mb-6">
@@ -199,7 +208,55 @@ const ParentDashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* Recent Activities */}
+        {/* Upcoming Events */}
+        <div className="bg-white p-6 rounded-xl border border-gray-200">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-lg font-semibold text-gray-900">Upcoming Events</h2>
+            <Calendar className="h-5 w-5 text-gray-500" />
+          </div>
+          <div className="space-y-4">
+            {upcomingEvents.map((event, index) => (
+              <div key={index} className="flex items-start p-3 bg-gray-50 rounded-lg">
+                <Calendar className="h-5 w-5 text-blue-500" />
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-gray-900">{event.title}</p>
+                  <p className="text-xs text-gray-600">{event.description}</p>
+                  <p className="text-xs text-gray-400 mt-1">{new Date(event.event_date).toLocaleDateString()}</p>
+                </div>
+              </div>
+            ))}
+            {upcomingEvents.length === 0 && (
+              <p className="text-sm text-gray-500">No upcoming events</p>
+            )}
+          </div>
+        </div>
+
+        {/* Upcoming Assessments */}
+        <div className="bg-white p-6 rounded-xl border border-gray-200">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-lg font-semibold text-gray-900">Upcoming Assessments</h2>
+            <Book className="h-5 w-5 text-gray-500" />
+          </div>
+          <div className="space-y-4">
+            {upcomingAssessments.map((assessment, index) => (
+              <div key={index} className="flex items-start p-3 bg-gray-50 rounded-lg">
+                <Book className="h-5 w-5 text-yellow-500" />
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-gray-900">{assessment.title}</p>
+                  <p className="text-xs text-gray-600">{assessment.description}</p>
+                  <p className="text-xs text-gray-400 mt-1">{new Date(assessment.assessment_date).toLocaleDateString()}</p>
+                </div>
+              </div>
+            ))}
+            {upcomingAssessments.length === 0 && (
+              <p className="text-sm text-gray-500">No upcoming assessments</p>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Recent Activities */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <div className="bg-white p-6 rounded-xl border border-gray-200">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-lg font-semibold text-gray-900">Recent Activities</h2>

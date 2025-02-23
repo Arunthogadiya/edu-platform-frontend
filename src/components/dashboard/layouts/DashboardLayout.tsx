@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Menu, X, User, LogOut, Layout, GraduationCap, Calendar, MessageSquare, Bot, Users, HelpCircle, Home, Brain, Star } from 'lucide-react';
+import { Menu, X, User, LogOut, Layout, GraduationCap, Calendar, MessageSquare, Bot, Users, HelpCircle, Home, Brain, Star, Trophy } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import DashboardErrorBoundary from '../parent/DashboardErrorBoundary';
 import VoiceQuery from '../parent/VoiceQuery';
@@ -105,6 +105,33 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, userType })
       path: '/teacher/dashboard/behavior',
       color: 'text-rose-600',
       bgColor: 'hover:bg-rose-50'
+    },
+    { 
+      id: 'resources', 
+      icon: Layout, 
+      label: 'Learning Resources', 
+      description: 'Manage learning materials', 
+      path: '/teacher/dashboard/resources',
+      color: 'text-emerald-600',
+      bgColor: 'hover:bg-emerald-50'
+    },
+    { 
+      id: 'activities', 
+      icon: Trophy, 
+      label: 'Activities', 
+      description: 'Track student achievements', 
+      path: '/teacher/dashboard/activities',
+      color: 'text-amber-600',
+      bgColor: 'hover:bg-amber-50'
+    },
+    { 
+      id: 'events', 
+      icon: Calendar, 
+      label: 'Events & Assessments', 
+      description: 'Manage class events', 
+      path: '/teacher/dashboard/events',
+      color: 'text-purple-600',
+      bgColor: 'hover:bg-purple-50'
     }
   ] : [
     // Original parent menu items
