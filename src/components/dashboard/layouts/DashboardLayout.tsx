@@ -3,6 +3,7 @@ import { Menu, X, User, LogOut, Layout, GraduationCap, Calendar, MessageSquare, 
 import { useNavigate, useLocation } from 'react-router-dom';
 import DashboardErrorBoundary from '../parent/DashboardErrorBoundary';
 import VoiceQuery from '../parent/VoiceQuery';
+import NotificationBell from '../../common/NotificationBell';
 
 interface DashboardLayoutProps {
   children?: React.ReactNode;
@@ -241,6 +242,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, userType })
             </div>
             
             <div className="flex items-center space-x-4 px-4">
+              <NotificationBell />
               <div className="hidden md:flex items-center p-2 text-white rounded-lg bg-white/5">
                 <User size={20} />
                 <span className="ml-2 text-sm">{userData?.name}</span>

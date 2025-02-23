@@ -74,6 +74,7 @@ const ParentDashboard: React.FC = () => {
         // Fetch timetable data
         const timetable = await dashboardService.fetchTimeTable();
         setTimetableData(timetable);
+        console.log('Timetable data:', timetable);
 
         const gradesResponse = await dashboardService.fetchGrades(user.id, new Date().toISOString());
         
@@ -107,6 +108,29 @@ const ParentDashboard: React.FC = () => {
       loadDashboardData();
     }
   }, [isIndexRoute]);
+
+  const formatTime = (dateString: string) => {
+    const date = new Date(dateString);
+    // Convert GMT to IST by adding 5 hours and 30 minutes
+    date.setHours(date.getHours() + 5);
+    date.setMinutes(date.getMinutes() + 30);
+    
+    const hours = date.getHours();
+    const minutes = date.getMinutes();
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    const formattedHours = hours % 12 || 12; // Convert to 12-hour format
+    
+    return `${formattedHours}:${minutes.toString().padStart(2, '0')} ${ampm}`;
+  };
+
+  const getCurrentDaySchedule = (timetableData: TimeTableEntry[]) => {
+    if (!timetableData) return [];
+    
+    const today = new Date().toLocaleDateString('en-US', { weekday: 'long' });
+    return timetableData
+      .filter(entry => entry.day_of_week.toLowerCase() === today.toLowerCase())
+      .sort((a, b) => a.start_time.localeCompare(b.start_time));
+  };
 
   if (error) {
     return <div className="p-4 text-red-500">{error}</div>;
@@ -197,33 +221,33 @@ const ParentDashboard: React.FC = () => {
         {/* Timeline */}
         <div className="bg-white p-6 rounded-xl border border-gray-200">
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-lg font-semibold text-gray-900">Today's Timeline</h2>
-            <Clock className="h-5 w-5 text-gray-500" />
+            <h2 className="text-lg font-semibold text-gray-900">Today's Schedule</h2>
+            <Clock className="h-5 w-5 text-blue-500" />
           </div>
-          <div className="space-y-6">
-            {timetableData
-              .filter(entry => entry.day_of_week.toLowerCase() === new Date().toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase())
-              .sort((a, b) => a.start_time.localeCompare(b.start_time))
-              .map((item, index) => (
-                <div key={index} className="flex items-start">
-                  <div className="flex-shrink-0 w-24 text-sm text-gray-500">
-                    {new Date(`2000-01-01T${item.start_time}`).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+          <div className="space-y-4 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 400px)' }}>
+            {timetableData ? (
+              getCurrentDaySchedule(timetableData).map((period, index) => (
+                <div key={index} className="flex items-center p-3 bg-gray-50 rounded-lg">
+                  <div className="w-40 flex-shrink-0">
+                    <p className="text-sm font-medium text-gray-900">{formatTime(period.start_time)} - {formatTime(period.end_time)}</p>
                   </div>
-                  <div className="w-px h-full mx-4 bg-blue-500" />
-                  <div className="flex-1 pt-0.5">
-                    <p className="text-sm font-medium text-gray-900">{item.subject}</p>
-                    <p className="text-xs text-gray-500">
-                      {new Date(`2000-01-01T${item.start_time}`).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} 
-                      {' - '}
-                      {new Date(`2000-01-01T${item.end_time}`).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  <div className="flex-1 ml-4">
+                    <p className="font-medium text-gray-900">{period.subject}</p>
+                    <p className="text-sm text-gray-500">
+                      Class {period.class_value}-{period.section}
                     </p>
                   </div>
                 </div>
-              ))}
-            {timetableData.filter(entry => 
-              entry.day_of_week.toLowerCase() === new Date().toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase()
-            ).length === 0 && (
-              <p className="text-sm text-gray-500">No classes scheduled for today</p>
+              ))
+            ) : (
+              <div className="text-center text-gray-500">
+                <p>No schedule available for today</p>
+              </div>
+            )}
+            {timetableData && getCurrentDaySchedule(timetableData).length === 0 && (
+              <div className="text-center text-gray-500">
+                <p>No classes scheduled for today</p>
+              </div>
             )}
           </div>
         </div>
