@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Bot, Send, Mic, StopCircle, Minimize2, Maximize2, GraduationCap, Calendar, AlertCircle, HelpCircle, ExternalLink, Upload, X } from 'lucide-react';
 import { chatbotService } from '../../../services/chatbotService';
+import { notificationService } from '../../../services/notificationService';  // Add this import
 import { useLocation } from 'react-router-dom';
 import SmartReminderManager from '../../../services/SmartReminderManager';
 import './EduPal.css';
+import ReactMarkdown from 'react-markdown';
 
 interface Message {
   id: string;
@@ -22,7 +24,7 @@ interface QuickAccessItem {
 
 interface UploadedDocument {
   id: string;
-  name: string;
+  name: number;
   size: number;
   type: string;
 }
@@ -218,6 +220,13 @@ const EduPal: React.FC = () => {
       setMessages([WELCOME_MESSAGE]);
     }
   }, []);
+
+  useEffect(() => {
+    if (!isOpen) {
+      // Reset conversation when chat is closed
+      chatbotService.resetConversation();
+    }
+  }, [isOpen]);
 
   const loadChatHistory = async () => {
     try {
@@ -476,7 +485,7 @@ const EduPal: React.FC = () => {
     };
 
     checkReminders();
-    const interval = setInterval(checkReminders, 60000); // Check every minute
+    const interval = setInterval(checkReminders, 6000); // Check every minute
     return () => clearInterval(interval);
   }, [location.pathname, isOpen]);
 
@@ -584,7 +593,7 @@ const EduPal: React.FC = () => {
     checkSmartSuggestions();
 
     // Set up intervals for checking different types of suggestions
-    const smartInterval = setInterval(checkSmartSuggestions, 60000); // Every minute
+    const smartInterval = setInterval(checkSmartSuggestions, 6000); // Every minute
     
     return () => {
       clearInterval(smartInterval);
@@ -750,7 +759,7 @@ const EduPal: React.FC = () => {
       {isOpen && (
         <div className={`edupal-chat-window bg-gradient-to-br from-blue-50 to-purple-50 
           rounded-xl shadow-lg flex flex-col transition-all duration-300 ease-in-out overflow-hidden
-          ${isMinimized ? 'h-16 w-72' : 'h-[38rem] w-[26rem]'}`}
+          ${isMinimized ? 'h-19 w-75' : 'h-[45rem] w-[35rem]'}`}
         >
           {/* Header */}
           <div className="flex items-center justify-between p-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white">
@@ -767,14 +776,14 @@ const EduPal: React.FC = () => {
               onClick={() => setIsMinimized(!isMinimized)}
               className="p-1.5 rounded-lg bg-white/20 text-white hover:bg-white/30 transition-colors"
             >
-              {isMinimized ? <Maximize2 size={16} /> : <Minimize2 size={16} />}
+              {isMinimized ? <Maximize2 size={20} /> : <Minimize2 size={16} />}
             </button>
           </div>
 
           {!isMinimized && (
             <>
               {/* Messages Container */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-4">
+              <div className="flex-1 overflow-y-auto p-4 space-y-4 messages-container">
                 {messages.length === 0 && !isLoading && (
                   <div className="space-y-6">
                     <div className="text-center space-y-2">
@@ -816,14 +825,43 @@ const EduPal: React.FC = () => {
                     className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
                   >
                     <div
-                      className={`max-w-[80%] rounded-lg p-2.5 text-sm ${
+                      className={`max-w-[80%] rounded-lg p-2.5 ${
                         message.type === 'user'
                           ? 'bg-blue-600 text-white ml-4'
                           : 'bg-white text-gray-800 mr-4'
                       }`}
                     >
-                      <p className="text-sm">{message.content}</p>
-                      {/* Fix the resources section */}
+                      <div className="text-sm prose-sm dark:prose-invert">
+                        <ReactMarkdown
+                          components={{
+                            p: ({children}) => <p className="m-0">{children}</p>,
+                            ul: ({children}) => <ul className="m-0 pl-4">{children}</ul>,
+                            li: ({children}) => <li className="m-0">{children}</li>,
+                            a: ({children, href}) => (
+                              <a 
+                                href={href} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className={`${
+                                  message.type === 'user' 
+                                    ? 'text-blue-100 hover:text-blue-200' 
+                                    : 'text-blue-600 hover:text-blue-700'
+                                } underline`}
+                              >
+                                {children}
+                              </a>
+                            ),
+                            code: ({children}) => (
+                              <code className="bg-gray-100 dark:bg-gray-800 px-1 rounded text-sm">
+                                {children}
+                              </code>
+                            ),
+                          }}
+                        >
+                          {message.content}
+                        </ReactMarkdown>
+                      </div>
+                      {/* Rest of the message component (resources, etc.) */}
                       {message.resources && message.resources.length > 0 && (
                         <div className="mt-2 space-y-1">
                           {message.resources.map((resource, index) => (

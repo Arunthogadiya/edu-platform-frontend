@@ -19,6 +19,7 @@ import TalentProfile from './components/dashboard/parent/pages/TalentProfile';
 import HelpSupport from './components/dashboard/parent/pages/HelpSupport';
 import Activities from './components/dashboard/parent/pages/Activities';
 import { AttendanceProvider } from './context/AttendanceContext';
+import LearningResources from './components/dashboard/parent/LearningResources';
 
 // Separate components for different dashboard layouts
 const ParentDashboardLayout = () => (
@@ -70,6 +71,7 @@ function App() {
                 <Route path="talent" element={<TalentProfile />} />
                 <Route path="helper" element={<HelpSupport />} />
                 <Route path="activities" element={<Activities />} />
+                <Route path="resources" element={<LearningResources />} />
               </Route>
             </Route>
 

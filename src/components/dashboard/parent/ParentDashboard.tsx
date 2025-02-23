@@ -4,6 +4,7 @@ import { Book, Bell, Calendar, MessageSquare, TrendingUp, Clock, Activity, Award
 import { dashboardService } from '../../../services/dashboardService';
 import { authService } from '../../../services/authService';
 import { eventService, Event, Assessment } from '../../../services/eventService';
+import { learningResourceService } from '../../../services/learningResourceService';
 
 interface Activity {
   activity_name: string;
@@ -41,19 +42,23 @@ interface DashboardData {
   };
 }
 
-const MOCK_TIMELINE = [
-  { time: '8:45 AM', event: 'Arrived at school', type: 'attendance' },
-  { time: '9:00 AM', event: 'Mathematics Class', type: 'class' },
-  { time: '10:30 AM', event: 'Science Test', type: 'assessment' },
-  { time: '12:00 PM', event: 'Lunch Break', type: 'break' },
-  { time: '1:00 PM', event: 'English Class', type: 'class' },
-];
+interface TimeTableEntry {
+  id: number;
+  class_value: string;
+  section: string;
+  day_of_week: string;
+  start_time: string;
+  end_time: string;
+  subject: string;
+  teacher_id: number;
+}
 
 const ParentDashboard: React.FC = () => {
   const isIndexRoute = useMatch('/parent/dashboard');
   const [dashboardData, setDashboardData] = useState<DashboardData>({});
   const [upcomingEvents, setUpcomingEvents] = useState<Event[]>([]);
   const [upcomingAssessments, setUpcomingAssessments] = useState<Assessment[]>([]);
+  const [timetableData, setTimetableData] = useState<TimeTableEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -65,6 +70,10 @@ const ParentDashboard: React.FC = () => {
         if (!user) {
           throw new Error('User data not found');
         }
+
+        // Fetch timetable data
+        const timetable = await dashboardService.fetchTimeTable();
+        setTimetableData(timetable);
 
         const gradesResponse = await dashboardService.fetchGrades(user.id, new Date().toISOString());
         
@@ -192,19 +201,30 @@ const ParentDashboard: React.FC = () => {
             <Clock className="h-5 w-5 text-gray-500" />
           </div>
           <div className="space-y-6">
-            {MOCK_TIMELINE.map((item, index) => (
-              <div key={index} className="flex items-start">
-                <div className="flex-shrink-0 w-16 text-sm text-gray-500">{item.time}</div>
-                <div className={`w-px h-full mx-4 ${
-                  item.type === 'assessment' ? 'bg-yellow-500' :
-                  item.type === 'class' ? 'bg-blue-500' :
-                  item.type === 'break' ? 'bg-green-500' : 'bg-gray-300'
-                }`} />
-                <div className="flex-1 pt-0.5">
-                  <p className="text-sm font-medium text-gray-900">{item.event}</p>
+            {timetableData
+              .filter(entry => entry.day_of_week.toLowerCase() === new Date().toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase())
+              .sort((a, b) => a.start_time.localeCompare(b.start_time))
+              .map((item, index) => (
+                <div key={index} className="flex items-start">
+                  <div className="flex-shrink-0 w-24 text-sm text-gray-500">
+                    {new Date(`2000-01-01T${item.start_time}`).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </div>
+                  <div className="w-px h-full mx-4 bg-blue-500" />
+                  <div className="flex-1 pt-0.5">
+                    <p className="text-sm font-medium text-gray-900">{item.subject}</p>
+                    <p className="text-xs text-gray-500">
+                      {new Date(`2000-01-01T${item.start_time}`).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} 
+                      {' - '}
+                      {new Date(`2000-01-01T${item.end_time}`).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </p>
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            {timetableData.filter(entry => 
+              entry.day_of_week.toLowerCase() === new Date().toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase()
+            ).length === 0 && (
+              <p className="text-sm text-gray-500">No classes scheduled for today</p>
+            )}
           </div>
         </div>
 

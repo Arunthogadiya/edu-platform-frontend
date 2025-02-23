@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Menu, X, User, LogOut, Layout, GraduationCap, Calendar, MessageSquare, Bot, Users, HelpCircle, Home, Brain, Star, Trophy } from 'lucide-react';
+import { Menu, X, User, LogOut, Layout, GraduationCap, Calendar, MessageSquare, Bot, Users, HelpCircle, Home, Brain, Star, Trophy, Book } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import DashboardErrorBoundary from '../parent/DashboardErrorBoundary';
 import VoiceQuery from '../parent/VoiceQuery';
@@ -207,6 +207,15 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, userType })
       path: '/parent/dashboard/talent',
       color: 'text-amber-600',
       bgColor: 'hover:bg-amber-50'
+    },
+    { 
+      id: 'resources', 
+      icon: Book, 
+      label: 'Learning Resources', 
+      description: 'Access study materials', 
+      path: '/parent/dashboard/resources',
+      color: 'text-emerald-600',
+      bgColor: 'hover:bg-emerald-50'
     }
   ];
 

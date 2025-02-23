@@ -212,6 +212,37 @@
 .edupal-chat-window {
   backdrop-filter: blur(8px);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  scrollbar-width: thin;
+  scrollbar-color: rgba(59, 130, 246, 0.3) rgba(219, 234, 254, 0.1);
+}
+
+.edupal-chat-window ::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.edupal-chat-window ::-webkit-scrollbar-track {
+  background: rgba(219, 234, 254, 0.1);
+  border-radius: 8px;
+  margin: 4px;
+}
+
+.edupal-chat-window ::-webkit-scrollbar-thumb {
+  background: rgba(59, 130, 246, 0.3);
+  border-radius: 8px;
+  transition: all 0.3s ease;
+}
+
+.edupal-chat-window ::-webkit-scrollbar-thumb:hover {
+  background: rgba(59, 130, 246, 0.5);
+}
+
+.edupal-chat-window .messages-container {
+  scrollbar-gutter: stable;
+  padding-right: 6px;
+  scroll-behavior: smooth;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .edupal-suggestion {
@@ -224,4 +255,48 @@
 
 .suggestion-enter {
   animation: float-in 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Markdown Styles */
+.prose-sm {
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.prose-sm p {
+  margin: 0.5em 0;
+}
+
+.prose-sm ul {
+  margin: 0.5em 0;
+  padding-left: 1.5em;
+}
+
+.prose-sm li {
+  margin: 0.25em 0;
+}
+
+.prose-sm code {
+  font-size: 0.875em;
+  padding: 0.2em 0.4em;
+  border-radius: 0.25em;
+}
+
+.prose-sm table {
+  font-size: 0.875em;
+  margin: 0.5em 0;
+  border-collapse: collapse;
+}
+
+.prose-sm th,
+.prose-sm td {
+  padding: 0.5em;
+  border: 1px solid #e5e7eb;
+}
+
+.prose-sm blockquote {
+  margin: 0.5em 0;
+  padding-left: 1em;
+  border-left: 2px solid #e5e7eb;
+  color: #6b7280;
 }
