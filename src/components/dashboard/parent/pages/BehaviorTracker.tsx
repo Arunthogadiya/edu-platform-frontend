@@ -41,6 +41,7 @@ import {
   Activity
 } from 'lucide-react';
 import { dashboardService } from '../../../../services/dashboardService';
+import { behaviorService } from '../../../../services/behaviorService';
 
 const BehaviorTracker: React.FC = () => {
   const [behaviorData, setBehaviorData] = useState<any>(null);
@@ -48,6 +49,8 @@ const BehaviorTracker: React.FC = () => {
   
   // Add key state for chart rerendering
   const [chartKey, setChartKey] = useState(0);
+  const [comment, setComment] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     loadBehaviorData();
@@ -69,6 +72,25 @@ const BehaviorTracker: React.FC = () => {
       console.error('Error loading behavior data:', error);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleBehaviorSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!comment.trim()) return;
+
+    setIsSubmitting(true);
+    try {
+      const result = await behaviorService.logHomeBehavior(comment);
+      if (result.success) {
+        setComment('');
+        // Optionally refresh behavior data
+        await loadBehaviorData();
+      }
+    } catch (error) {
+      console.error('Error submitting behavior:', error);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -164,6 +186,41 @@ const BehaviorTracker: React.FC = () => {
     return { positive, neutral, negative };
   };
 
+  const getBehaviorTypeTag = (type: string) => {
+    const typeColors: Record<string, string> = {
+      'Classroom Participation': 'bg-blue-100 text-blue-700',
+      'Social Interaction': 'bg-purple-100 text-purple-700',
+      'Academic Performance': 'bg-green-100 text-green-700',
+      'Conduct': 'bg-yellow-100 text-yellow-700',
+      'Leadership': 'bg-indigo-100 text-indigo-700',
+      'Homework': 'bg-pink-100 text-pink-700',
+      // Add more behavior types and colors as needed
+    };
+
+    // Default color if type doesn't match
+    const colorClass = typeColors[type] || 'bg-gray-100 text-gray-700';
+
+    return (
+      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${colorClass}`}>
+        {type}
+      </span>
+    );
+  };
+
+  const BehaviorRecord = ({ record }: { record: any }) => (
+    <div className={`p-3 rounded-lg ${
+      parseFloat(record.sentiment_score) > 0 ? 'bg-green-50' : 'bg-red-50'
+    }`}>
+      <div className="flex items-start justify-between mb-2">
+        {getBehaviorTypeTag(record.behavior_type)}
+        <span className="text-xs text-gray-500">
+          {new Date(record.date).toLocaleDateString()}
+        </span>
+      </div>
+      <p className="text-sm font-medium text-gray-800">{record.comment}</p>
+    </div>
+  );
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -177,6 +234,32 @@ const BehaviorTracker: React.FC = () => {
 
   return (
     <div className="p-6 max-w-7xl mx-auto">
+      {/* Add this new section before existing content */}
+      <div className="mb-8">
+        <div className="bg-white p-6 rounded-xl shadow-sm border">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Log Home Behavior</h3>
+          <form onSubmit={handleBehaviorSubmit}>
+            <div className="flex gap-4">
+              <textarea
+                value={comment}
+                onChange={(e) => setComment(e.target.value)}
+                placeholder="Enter your observations about your child's behavior..."
+                className="flex-1 min-h-[100px] p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+              />
+            </div>
+            <div className="mt-4 flex justify-end">
+              <button
+                type="submit"
+                disabled={isSubmitting || !comment.trim()}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isSubmitting ? 'Submitting...' : 'Submit Observation'}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+
       {/* Header with Overall Status */}
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-gray-900">Behavior Insights</h1>
@@ -217,17 +300,7 @@ const BehaviorTracker: React.FC = () => {
           </div>
           <div className="space-y-3 max-h-[400px] overflow-y-auto">
             {analysis?.categories.academic.map((record: any, index: number) => (
-              <div 
-                key={index} 
-                className={`p-3 rounded-lg ${
-                  parseFloat(record.sentiment_score) > 0 ? 'bg-green-50' : 'bg-red-50'
-                }`}
-              >
-                <p className="text-sm font-medium">{record.comment}</p>
-                <div className="mt-1 text-xs text-gray-500">
-                  {new Date(record.date).toLocaleDateString()}
-                </div>
-              </div>
+              <BehaviorRecord key={index} record={record} />
             ))}
           </div>
         </div>
@@ -240,17 +313,7 @@ const BehaviorTracker: React.FC = () => {
           </div>
           <div className="space-y-3 max-h-[400px] overflow-y-auto">
             {analysis?.categories.social.map((record: any, index: number) => (
-              <div 
-                key={index} 
-                className={`p-3 rounded-lg ${
-                  parseFloat(record.sentiment_score) > 0 ? 'bg-green-50' : 'bg-red-50'
-                }`}
-              >
-                <p className="text-sm font-medium">{record.comment}</p>
-                <div className="mt-1 text-xs text-gray-500">
-                  {new Date(record.date).toLocaleDateString()}
-                </div>
-              </div>
+              <BehaviorRecord key={index} record={record} />
             ))}
           </div>
         </div>
@@ -263,17 +326,7 @@ const BehaviorTracker: React.FC = () => {
           </div>
           <div className="space-y-3 max-h-[400px] overflow-y-auto">
             {analysis?.categories.conduct.map((record: any, index: number) => (
-              <div 
-                key={index} 
-                className={`p-3 rounded-lg ${
-                  parseFloat(record.sentiment_score) > 0 ? 'bg-green-50' : 'bg-red-50'
-                }`}
-              >
-                <p className="text-sm font-medium">{record.comment}</p>
-                <div className="mt-1 text-xs text-gray-500">
-                  {new Date(record.date).toLocaleDateString()}
-                </div>
-              </div>
+              <BehaviorRecord key={index} record={record} />
             ))}
           </div>
         </div>
@@ -289,17 +342,7 @@ const BehaviorTracker: React.FC = () => {
             </div>
             <div className="space-y-3 max-h-[400px] overflow-y-auto">
               {analysis?.categories.other.map((record: any, index: number) => (
-                <div 
-                  key={index} 
-                  className={`p-3 rounded-lg ${
-                    parseFloat(record.sentiment_score) > 0 ? 'bg-green-50' : 'bg-red-50'
-                  }`}
-                >
-                  <p className="text-sm font-medium">{record.comment}</p>
-                  <div className="mt-1 text-xs text-gray-500">
-                    {new Date(record.date).toLocaleDateString()}
-                  </div>
-                </div>
+                <BehaviorRecord key={index} record={record} />
               ))}
             </div>
           </div>

@@ -22,17 +22,27 @@ interface NewStudent {
 export const studentApi = {
   getStudents: async (class_value: string, section: string): Promise<Student[]> => {
     try {
+      console.log('Fetching students with params:', { class_value, section });
       const response = await api.get('/api/students', {
         params: {
           class_value,
           section,
         },
       });
-      console.log('Students API response:', response.data);
-      return response.data;
+      console.log('Raw API response:', response);
+      
+      if (!response.data) {
+        console.error('No data received from API');
+        return [];
+      }
+
+      // Ensure the data matches our interface
+      const students = Array.isArray(response.data) ? response.data : [];
+      console.log('Processed students data:', students);
+      return students;
     } catch (error) {
       console.error('Students API error:', error);
-      return [];
+      throw error; // Let the component handle the error
     }
   },
 

@@ -144,6 +144,13 @@ const handleApiResponse = async (response: Response) => {
   return await response.json();
 };
 
+interface DashboardStats {
+  totalStudents: number;
+  presentToday: number;
+  avgPerformance: number;
+  upcomingTests: number;
+}
+
 class DashboardService {
   async fetchGrades(userId: string | number, date?: string): Promise<GradesResponse> {
     try {
@@ -236,6 +243,33 @@ class DashboardService {
     } catch (error) {
       console.error('Error fetching students:', error);
       throw error;
+    }
+  }
+
+  async getTeacherDashboardStats(class_value: string, section: string): Promise<DashboardStats> {
+    try {
+      const response = await api.get('/api/dashboard/stats', {
+        params: {
+          class_value,
+          section,
+        },
+      });
+      
+      console.log('Dashboard stats response:', response.data);
+      return {
+        totalStudents: response.data.totalStudents || 0,
+        presentToday: response.data.presentToday || 0,
+        avgPerformance: response.data.avgPerformance || 0,
+        upcomingTests: response.data.upcomingTests || 0,
+      };
+    } catch (error) {
+      console.error('Error fetching dashboard stats:', error);
+      return {
+        totalStudents: 0,
+        presentToday: 0,
+        avgPerformance: 0,
+        upcomingTests: 0,
+      };
     }
   }
 }
