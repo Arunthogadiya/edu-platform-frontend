@@ -30,9 +30,9 @@ export const RoleSelectionPage: React.FC = () => {
           <p className="text-gray-600">{t('welcome.selectRole')}</p>
         </div>
         
-        <div className="bg-yellow-100 border border-yellow-200 rounded-lg p-4 mb-4">
+        {/* <div className="bg-yellow-100 border border-yellow-200 rounded-lg p-4 mb-4">
           <p className="text-yellow-800 text-sm">{t('welcome.beta')}</p>
-        </div>
+        </div> */}
 
         <div className="space-y-6">
           <div className="space-y-3">

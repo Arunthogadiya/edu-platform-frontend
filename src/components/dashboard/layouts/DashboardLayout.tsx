@@ -236,8 +236,9 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, userType })
               >
                 {isSidebarOpen ? <X size={24} /> : <Menu size={24} />}
               </button>
-              <h1 className="ml-4 text-xl font-semibold text-white truncate">
-                {userData?.studentName}'s Education Portal
+              <h1 className="ml-5 text-xl font-bold text-white truncate">
+                {/* {userData?.studentName}'s Education Portal */}
+                EngageEd
               </h1>
             </div>
             

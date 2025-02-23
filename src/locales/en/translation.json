@@ -2,7 +2,7 @@
   "welcome": {
     "title": "Welcome to Engage-ED",
     "selectRole": "Please select your role to continue",
-    "beta": "This platform is currently in beta testing phase"
+    "beta": ""
   },
   "roles": {
     "parent": "Parent",
@@ -28,5 +28,10 @@
     "loggingIn": "Logging in...",
     "loginSuccess": "Login successful!",
     "redirecting": "Redirecting to dashboard..."
+  },
+  "teacher": {
+    "attendance": {
+      "leaveRequests": "Leave Requests"
+    }
   }
 }

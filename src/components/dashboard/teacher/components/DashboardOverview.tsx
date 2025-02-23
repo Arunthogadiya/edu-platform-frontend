@@ -527,8 +527,8 @@ const DashboardOverview: React.FC = () => {
       {/* Add debug info in development */}
       {process.env.NODE_ENV === 'development' && (
         <div className="mt-4 p-4 bg-gray-100 rounded-lg">
-          <h3 className="font-bold">Debug Info:</h3>
-          <pre className="mt-2 text-sm">
+          {/* <h3 className="font-bold">Debug Info:</h3> */}
+          {/* <pre className="mt-2 text-sm">
             {JSON.stringify(
               {
                 selectedClass,
@@ -540,7 +540,7 @@ const DashboardOverview: React.FC = () => {
               null,
               2
             )}
-          </pre>
+          </pre> */}
         </div>
       )}
     </div>

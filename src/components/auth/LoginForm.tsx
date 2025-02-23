@@ -93,17 +93,17 @@ export const LoginForm: React.FC<LoginFormProps> = ({ role, onSuccess }) => {
 
       {role === 'teacher' && (
         <div className="mt-4 text-sm text-gray-600">
-          <p className="font-medium">Demo credentials:</p>
+          {/* <p className="font-medium">Demo credentials:</p>
           <p>Email: teacher1@school.com</p>
-          <p>Password: teacher123</p>
+          <p>Password: teacher123</p> */}
         </div>
       )}
 
       {role === 'parent' && (
         <div className="mt-4 text-sm text-gray-600">
-          <p className="font-medium">Demo credentials:</p>
+          {/* <p className="font-medium">Demo credentials:</p>
           <p>Email: parent@example.com</p>
-          <p>Password: parent123</p>
+          <p>Password: parent123</p> */}
         </div>
       )}
     </form>
