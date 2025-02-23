@@ -1,0 +1,37 @@
+{
+  "welcome": {
+    "title": "Welcome to Engage-ED",
+    "selectRole": "Please select your role to continue",
+    "beta": ""
+  },
+  "roles": {
+    "parent": "Parent",
+    "teacher": "Teacher"
+  },
+  "auth": {
+    "back": "Back",
+    "login": "Login",
+    "register": "Register",
+    "registering": "Registering...",
+    "fullName": "Full Name",
+    "enterName": "Enter your full name",
+    "email": "Email",
+    "enterEmail": "Enter your email",
+    "password": "Password",
+    "enterPassword": "Enter your password",
+    "phone": "Phone Number",
+    "enterPhone": "Enter your phone number",
+    "studentId": "Student ID",
+    "enterStudentId": "Enter student ID",
+    "subject": "Subject",
+    "enterSubject": "Enter your subject",
+    "loggingIn": "Logging in...",
+    "loginSuccess": "Login successful!",
+    "redirecting": "Redirecting to dashboard..."
+  },
+  "teacher": {
+    "attendance": {
+      "leaveRequests": "Leave Requests"
+    }
+  }
+}
