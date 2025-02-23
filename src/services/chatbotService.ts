@@ -85,29 +85,40 @@ class ChatbotService {
     }
   }
 
-  async submitVoiceQuery(audioData: string, childId: number): Promise<VoiceQueryResponse> {
+  async submitVoiceQuery(audioBase64: string, childId: number): Promise<VoiceQueryResponse> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/chatbot/voice`, {
+      // Validate base64 data
+      if (!audioBase64 || !/^[A-Za-z0-9+/=]+$/.test(audioBase64)) {
+        throw new Error('Invalid audio data format');
+      }
+
+      const payload = {
+        audio_data: audioBase64,
+        conversation_id: this.currentConversationId,
+        encoding: 'base64',
+        format: 'webm'
+      };
+
+      console.log('Sending audio data, size:', Math.round(audioBase64.length * 0.75), 'bytes');
+
+      const response = await fetch(`${this.baseUrl}/api/chatbot/conversation`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         },
-        body: JSON.stringify({ 
-          audio_data: audioData, 
-          child_id: childId,
-          conversation_id: this.currentConversationId 
-        })
+        body: JSON.stringify(payload)
       });
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorText = await response.text();
+        console.error('Server error details:', errorText);
+        throw new Error(`HTTP error! status: ${response.status}, details: ${errorText}`);
       }
       
       const data = await response.json();
       
-      // Store conversation ID if provided
       if (data.conversation_id) {
         this.currentConversationId = data.conversation_id;
       }
@@ -115,7 +126,8 @@ class ChatbotService {
       return data;
     } catch (error) {
       console.error('Failed to submit voice query:', error);
-      throw error;
+      // Add more context to the error
+      throw new Error(`Voice query failed: ${error.message || 'Unknown error'}`);
     }
   }
 }

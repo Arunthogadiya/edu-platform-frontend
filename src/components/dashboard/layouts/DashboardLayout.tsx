@@ -327,7 +327,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, userType })
             ${isMobile ? 'left-0' : (isSidebarOpen ? 'left-72' : 'left-20')}`}
         >
           <div className="h-full w-full p-4">
-            <div className="bg-white rounded-xl shadow-sm h-full w-full">
+            <div className="bg-white rounded-xl shadow-sm min-h-full w-full">
               {children}
             </div>
           </div>

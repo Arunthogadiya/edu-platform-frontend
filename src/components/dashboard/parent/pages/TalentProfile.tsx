@@ -1,6 +1,23 @@
 import React, { useState, useEffect } from 'react';
-import { Award, Trophy, Medal, Star, AlertCircle, Clock, BarChart } from 'lucide-react';  // Changed ChartIcon to BarChart
+import { Award, Trophy, Medal, Star, TrendingUp, Target, BookOpen } from 'lucide-react';
 import { dashboardService } from '../../../../services/dashboardService';
+import { talentService } from '../../../../services/talentService';
+import {
+  ResponsiveContainer,
+  RadarChart,
+  PolarGrid,
+  PolarAngleAxis,
+  Radar,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  LineChart,
+  Line
+} from 'recharts';
 
 const getBadgeIcon = (badge: string) => {
   switch (badge.toLowerCase()) {
@@ -19,18 +36,12 @@ const getBadgeIcon = (badge: string) => {
 
 const TalentProfile: React.FC = () => {
   const [activitiesData, setActivitiesData] = useState<any>(null);
+  const [talentScores, setTalentScores] = useState<any[]>([]);
+  const [peerComparison, setPeerComparison] = useState<any[]>([]);
+  const [recommendations, setRecommendations] = useState<any[]>([]);
+  const [talentHistory, setTalentHistory] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  const formatTimeToIST = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleTimeString('en-IN', {
-      timeZone: 'Asia/Kolkata',
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true
-    });
-  };
 
   useEffect(() => {
     loadData();
@@ -39,16 +50,106 @@ const TalentProfile: React.FC = () => {
   const loadData = async () => {
     try {
       setIsLoading(true);
-      const activities = await dashboardService.fetchActivities();
+      const [activities, scores, comparisons, recs, history] = await Promise.all([
+        dashboardService.fetchActivities(),
+        talentService.getTalentScores(),
+        talentService.getPeerComparison(),
+        talentService.getRecommendations(),
+        talentService.getTalentProfile()
+      ]);
+
       setActivitiesData(activities.students[0]);
+      setTalentScores(scores);
+      setPeerComparison(comparisons);
+      setRecommendations(recs);
+      setTalentHistory(history);
       setError(null);
     } catch (error) {
       console.error('Error loading data:', error);
-      setError('Failed to load activities data');
+      setError('Failed to load talent profile data');
     } finally {
       setIsLoading(false);
     }
   };
+
+  const renderTalentRadar = () => (
+    <div className="bg-white p-6 rounded-xl border">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-lg font-semibold text-gray-900">Talent Distribution</h3>
+        <Target className="h-6 w-6 text-blue-500" />
+      </div>
+      <div className="h-[400px]">
+        <ResponsiveContainer width="100%" height="100%">
+          <RadarChart data={talentScores}>
+            <PolarGrid />
+            <PolarAngleAxis dataKey="category" />
+            <Radar
+              name="Score"
+              dataKey="score"
+              stroke="#8884d8"
+              fill="#8884d8"
+              fillOpacity={0.6}
+            />
+          </RadarChart>
+        </ResponsiveContainer>
+      </div>
+    </div>
+  );
+
+  const renderPeerComparison = () => (
+    <div className="bg-white p-6 rounded-xl border">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-lg font-semibold text-gray-900">Peer Comparison</h3>
+        <TrendingUp className="h-6 w-6 text-blue-500" />
+      </div>
+      <div className="h-[400px]">
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={peerComparison}>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="category" />
+            <YAxis />
+            <Tooltip />
+            <Legend />
+            <Bar dataKey="studentScore" name="Your Score" fill="#8884d8" />
+            <Bar dataKey="averageScore" name="Peer Average" fill="#82ca9d" />
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+    </div>
+  );
+
+  const renderRecommendations = () => (
+    <div className="bg-white p-6 rounded-xl border">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-lg font-semibold text-gray-900">Recommended Opportunities</h3>
+        <BookOpen className="h-6 w-6 text-blue-500" />
+      </div>
+      <div className="space-y-4">
+        {recommendations.map((rec, index) => (
+          <div key={index} className="p-4 border rounded-lg hover:shadow-md transition-shadow">
+            <div className="flex justify-between items-start">
+              <div>
+                <h4 className="font-semibold text-gray-900">{rec.title}</h4>
+                <p className="text-sm text-gray-600 mt-1">{rec.description}</p>
+              </div>
+              <span className={`px-2 py-1 text-xs rounded-full ${
+                rec.difficulty === 'advanced' ? 'bg-purple-100 text-purple-700' :
+                rec.difficulty === 'intermediate' ? 'bg-blue-100 text-blue-700' :
+                'bg-green-100 text-green-700'
+              }`}>
+                {rec.difficulty}
+              </span>
+            </div>
+            {rec.deadline && (
+              <p className="text-sm text-gray-500 mt-2">
+                Deadline: {new Date(rec.deadline).toLocaleDateString()}
+              </p>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 
   if (isLoading) {
     return (
@@ -66,14 +167,25 @@ const TalentProfile: React.FC = () => {
         <p className="text-gray-600 mt-2">Discover and nurture your child's unique talents</p>
       </div>
 
+      {/* Talent Analytics Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        {renderTalentRadar()}
+        {renderPeerComparison()}
+      </div>
+
+      {/* Recommendations Section */}
+      <div className="mt-8">
+        {renderRecommendations()}
+      </div>
+
       {/* Activities Section */}
-      <div className="mb-8">
+      <div className="mt-8">
         <div className="flex items-center justify-between mb-6">
-          <h3 className="text-lg font-semibold text-gray-900">Activities & Achievements</h3>
+          <h3 className="text-lg font-semibold text-gray-900">Recent Achievements</h3>
           <Award className="h-6 w-6 text-blue-500" />
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {activitiesData?.activities?.map((activity: any, index: number) => (
+          {activitiesData?.activities?.slice(0, 3).map((activity: any, index: number) => (
             <div key={index} className="bg-white p-6 rounded-xl border hover:shadow-lg transition-shadow">
               <div className="flex items-start">
                 <div className="flex-shrink-0">
@@ -96,52 +208,6 @@ const TalentProfile: React.FC = () => {
               </div>
             </div>
           ))}
-        </div>
-      </div>
-
-      {/* Coming Soon Sections */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        {/* Talent Assessment - Coming Soon */}
-        <div className="bg-white p-6 rounded-xl border">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-900">Talent Assessment</h3>
-            <BarChart className="h-6 w-6 text-blue-500" /> {/* Changed from ChartIcon to BarChart */}
-          </div>
-          <div className="h-[300px] flex items-center justify-center bg-gray-50 rounded-lg">
-            <p className="text-gray-500">Talent assessment coming soon</p>
-          </div>
-        </div>
-
-        {/* Progress Tracking - Coming Soon */}
-        <div className="bg-white p-6 rounded-xl border">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-900">Progress Tracking</h3>
-            <Clock className="h-6 w-6 text-blue-500" />
-          </div>
-          <div className="h-[300px] flex items-center justify-center bg-gray-50 rounded-lg">
-            <p className="text-gray-500">Progress tracking coming soon</p>
-          </div>
-        </div>
-
-        {/* Events Timeline - Now using IST */}
-        <div className="bg-white p-6 rounded-xl border">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-900">Events Timeline</h3>
-            <Clock className="h-6 w-6 text-blue-500" />
-          </div>
-          <div className="space-y-4">
-            {/* Use the IST formatter for any time displays */}
-            {activitiesData?.activities?.map((activity: any, index: number) => (
-              <div key={index} className="flex items-center p-3 bg-gray-50 rounded-lg">
-                <div className="w-24 flex-shrink-0">
-                  <p className="text-sm font-medium text-gray-900">
-                    {activity.time && formatTimeToIST(activity.time)}
-                  </p>
-                </div>
-                {/* ...rest of activity display... */}
-              </div>
-            ))}
-          </div>
         </div>
       </div>
     </div>

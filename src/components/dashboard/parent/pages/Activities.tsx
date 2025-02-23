@@ -1,6 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { Award, Star, Medal, Trophy, AlertCircle } from 'lucide-react';
 import { dashboardService } from '../../../../services/dashboardService';
+import {
+  RadarChart,
+  PolarGrid,
+  PolarAngleAxis,
+  Radar,
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend
+} from 'recharts';
 
 const getBadgeIcon = (badge: string) => {
   switch (badge.toLowerCase()) {
@@ -40,6 +54,73 @@ const Activities: React.FC = () => {
     }
   };
 
+  // Analytics helper functions
+  const categorizeActivity = (activity: any) => {
+    const name = activity.activity_name.toLowerCase();
+    if (name.includes('basketball') || name.includes('sports') || name.includes('chess')) {
+      return 'Sports';
+    }
+    if (name.includes('robot') || name.includes('quiz') || name.includes('science')) {
+      return 'Academic';
+    }
+    if (name.includes('drama') || name.includes('music') || name.includes('art')) {
+      return 'Arts';
+    }
+    if (name.includes('debate') || name.includes('leadership')) {
+      return 'Leadership';
+    }
+    return 'Other';
+  };
+
+  const calculateSkillScores = (activities: any[]) => {
+    const scores: { [key: string]: { total: number; count: number } } = {
+      Sports: { total: 0, count: 0 },
+      Academic: { total: 0, count: 0 },
+      Arts: { total: 0, count: 0 },
+      Leadership: { total: 0, count: 0 },
+      Other: { total: 0, count: 0 }
+    };
+
+    activities.forEach(activity => {
+      const category = categorizeActivity(activity);
+      const badgeScore = 
+        activity.badge.toLowerCase() === 'mvp' ? 100 :
+        activity.badge.toLowerCase() === 'gold' ? 80 :
+        activity.badge.toLowerCase() === 'silver' ? 60 :
+        activity.badge.toLowerCase() === 'bronze' ? 40 : 20;
+
+      scores[category].total += badgeScore;
+      scores[category].count++;
+    });
+
+    return Object.entries(scores).map(([category, data]) => ({
+      subject: category,
+      A: data.count > 0 ? data.total / data.count : 0
+    }));
+  };
+
+  const processAchievements = (activities: any[]) => {
+    const categories = ['Academic', 'Sports', 'Arts', 'Leadership', 'Other'];
+    const achievements = categories.map(category => ({
+      category,
+      MVP: 0,
+      Gold: 0,
+      Silver: 0,
+      Bronze: 0
+    }));
+
+    activities.forEach(activity => {
+      const category = categorizeActivity(activity);
+      const badge = activity.badge.charAt(0).toUpperCase() + activity.badge.slice(1).toLowerCase();
+      const categoryIndex = achievements.findIndex(a => a.category === category);
+      if (categoryIndex !== -1 && ['MVP', 'Gold', 'Silver', 'Bronze'].includes(badge)) {
+        achievements[categoryIndex][badge as 'MVP' | 'Gold' | 'Silver' | 'Bronze']++;
+      }
+    });
+
+    return achievements;
+  };
+
   const renderActivityCard = (activity: any, index: number) => (
     <div key={index} className="bg-white p-6 rounded-xl border hover:shadow-lg transition-shadow">
       <div className="flex items-start">
@@ -70,6 +151,55 @@ const Activities: React.FC = () => {
       </p>
     </div>
   );
+
+  const renderAnalytics = (activities: any[]) => {
+    const skillsData = calculateSkillScores(activities);
+    const achievementsData = processAchievements(activities);
+
+    return (
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
+        {/* Skill Distribution Radar Chart */}
+        <div className="bg-white p-6 rounded-xl border">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Skill Distribution</h3>
+          <div className="h-[400px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <RadarChart data={skillsData}>
+                <PolarGrid />
+                <PolarAngleAxis dataKey="subject" />
+                <Radar
+                  name="Skills"
+                  dataKey="A"
+                  stroke="#8884d8"
+                  fill="#8884d8"
+                  fillOpacity={0.6}
+                />
+              </RadarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* Achievements Bar Chart */}
+        <div className="bg-white p-6 rounded-xl border">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Achievements Distribution</h3>
+          <div className="h-[400px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={achievementsData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="category" />
+                <YAxis />
+                <Tooltip />
+                <Legend />
+                <Bar dataKey="MVP" fill="#FFD700" />
+                <Bar dataKey="Gold" fill="#DAA520" />
+                <Bar dataKey="Silver" fill="#C0C0C0" />
+                <Bar dataKey="Bronze" fill="#CD7F32" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   if (isLoading) {
     return (
@@ -103,7 +233,7 @@ const Activities: React.FC = () => {
       </div>
 
       {/* Activities Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
         {activitiesData?.activities?.length > 0 ? (
           activitiesData.activities.map((activity: any, index: number) => 
             renderActivityCard(activity, index)
@@ -113,22 +243,13 @@ const Activities: React.FC = () => {
         )}
       </div>
 
-      {/* Coming Soon Features */}
-      <div className="mt-12 grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="bg-white p-6 rounded-xl border">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Achievement Tracking</h2>
-          <div className="h-48 flex items-center justify-center bg-gray-50 rounded-lg">
-            <p className="text-gray-500">Achievement tracking coming soon</p>
-          </div>
+      {/* Activity Analytics */}
+      {activitiesData?.activities?.length > 0 && (
+        <div className="mt-12">
+          <h2 className="text-xl font-semibold text-gray-900 mb-6">Activity Analytics</h2>
+          {renderAnalytics(activitiesData.activities)}
         </div>
-
-        <div className="bg-white p-6 rounded-xl border">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Activity Timeline</h2>
-          <div className="h-48 flex items-center justify-center bg-gray-50 rounded-lg">
-            <p className="text-gray-500">Activity timeline coming soon</p>
-          </div>
-        </div>
-      </div>
+      )}
     </div>
   );
 };

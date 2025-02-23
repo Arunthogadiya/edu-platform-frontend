@@ -1,40 +1,36 @@
-import api from './apiConfig';
+import axios from 'axios';
 
-interface Notification {
-  id: number;
+interface NotificationUpdate {
   type: 'grade' | 'attendance' | 'homework' | 'general';
   message: string;
-  priority: 'low' | 'medium' | 'high';
-  created_at: string;
+  timestamp: string;
 }
 
 class NotificationService {
-  async getImportantUpdates(childId: number): Promise<Notification[]> {
+  private baseUrl = import.meta.env.VITE_API_URL || 'http://192.168.0.100:5000/edu-platform/v1';
+
+  async getImportantUpdates(childId: number | undefined): Promise<NotificationUpdate[]> {
     try {
-      const response = await api.get(`/api/notifications/important/${childId}`);
+      if (!childId) {
+        console.warn('No child ID provided to getImportantUpdates');
+        return [];
+      }
+
+      const response = await axios.get(`${this.baseUrl}/api/notifications/important/${childId}`);
       return response.data;
     } catch (error) {
-      console.error('Error fetching important updates:', error);
-      return [];
+      console.error('Failed to fetch important updates:', error);
+      return []; // Return empty array instead of throwing
     }
   }
 
-  generateNotificationMessage(notification: Notification): string {
-    // Format the notification message based on type
-    switch (notification.type) {
-      case 'grade':
-        return `New grade update: ${notification.message}`;
-      case 'attendance':
-        return `Attendance update: ${notification.message}`;
-      case 'homework':
-        return `Homework update: ${notification.message}`;
-      default:
-        return notification.message;
-    }
+  generateNotificationMessage(update: NotificationUpdate): string {
+    return update.message || 'New update available';
   }
 }
 
 export const notificationService = new NotificationService();
+export type { NotificationUpdate };
 
 export const fetchNotifications = async (userId: string | undefined) => {
   const response = await api.get(`/users/${userId}/notifications`);
