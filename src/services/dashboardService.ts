@@ -4,7 +4,7 @@ import { mockGradesData } from '../data/mockGradesData';
 import { MockDataProvider } from '../utils/mockDataProvider';
 import type { Grade, SubjectGrades } from '../data/mockGradesData';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://192.168.0.105:5000/edu-platform/v1';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://10.0.44.48:5000/edu-platform/v1';
 
 interface GradeData {
   subject: string;

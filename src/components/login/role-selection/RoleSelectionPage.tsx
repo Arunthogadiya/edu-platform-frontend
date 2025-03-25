@@ -6,6 +6,7 @@ import { RoleButton } from './RoleButton';
 import { UtilityBar } from './UtilityBar';
 import { HelpModal } from '../../ui/HelpModal';
 import { motion } from 'framer-motion';
+import EducationalBackground from '../../backgrounds/EducationalBackground';
 
 export type UserRole = 'parent' | 'teacher';
 export type AuthAction = 'login' | 'register';
@@ -30,52 +31,11 @@ export const RoleSelectionPage: React.FC = () => {
     i18n.changeLanguage(lang);
   };
 
-  // Particle effect for background
-  const particles = Array.from({ length: 20 }).map((_, index) => ({
-    id: index,
-    size: Math.random() * 6 + 2,
-    x: Math.random() * 100,
-    y: Math.random() * 100,
-    duration: Math.random() * 20 + 10
-  }));
-
   return (
-    <div className="min-h-screen w-screen bg-gradient-to-br from-blue-900 via-indigo-900 to-purple-900 flex items-center justify-center p-4 overflow-hidden relative">
-      {/* Animated background particles */}
-      {particles.map((particle) => (
-        <motion.div
-          key={particle.id}
-          className="absolute rounded-full bg-white bg-opacity-20"
-          initial={{ 
-            width: particle.size, 
-            height: particle.size,
-            x: `${particle.x}%`, 
-            y: `${particle.y}%`, 
-            opacity: 0.2 
-          }}
-          animate={{ 
-            x: [`${particle.x}%`, `${(particle.x + 10) % 100}%`],
-            y: [`${particle.y}%`, `${(particle.y + 15) % 100}%`],
-            opacity: [0.2, 0.5, 0.2]
-          }}
-          transition={{ 
-            duration: particle.duration, 
-            repeat: Infinity, 
-            ease: "linear"
-          }}
-        />
-      ))}
+    <div className="min-h-screen w-screen flex items-center justify-center p-4 overflow-hidden relative">
+      {/* Replace particles with educational background */}
+      <EducationalBackground />
       
-      {/* Glowing ring animation */}
-      <motion.div 
-        className="absolute w-full h-full pointer-events-none"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 0.7 }}
-        transition={{ duration: 2 }}
-      >
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-3/4 h-3/4 rounded-full border-4 border-indigo-500 border-opacity-20 blur-xl" />
-      </motion.div>
-
       <motion.div 
         className="w-full max-w-lg mx-auto backdrop-blur-lg bg-white bg-opacity-10 p-8 rounded-2xl shadow-2xl border border-white border-opacity-20 transition-all duration-300 z-10"
         initial={{ opacity: 0, y: 20 }}

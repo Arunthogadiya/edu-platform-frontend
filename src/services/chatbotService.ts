@@ -17,7 +17,7 @@ interface VoiceQueryResponse extends ChatResponse {
 }
 
 class ChatbotService {
-  private baseUrl = import.meta.env.VITE_API_URL || 'http://192.168.0.105:5000/edu-platform/v1';
+  private baseUrl = import.meta.env.VITE_API_URL || 'http://10.0.44.48:5000/edu-platform/v1';
   private currentConversationId: string | null = null;
 
   async submitTextQuery(query: string, childId: number): Promise<ChatResponse> {
