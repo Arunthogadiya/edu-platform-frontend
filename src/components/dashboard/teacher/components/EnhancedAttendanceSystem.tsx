@@ -191,17 +191,54 @@ const EnhancedAttendanceSystem: React.FC = () => {
     initializeFaceService();
   }, []);
 
-  // Cleanup camera on unmount
+  // Comprehensive cleanup and stream monitoring
+  useEffect(() => {
+    let streamMonitor: NodeJS.Timeout | null = null;
+    
+    // Monitor stream health
+    if (mediaStream && isVideoPlaying) {
+      streamMonitor = setInterval(() => {
+        const tracks = mediaStream.getTracks();
+        const videoTrack = tracks.find(track => track.kind === 'video');
+        
+        if (!videoTrack || videoTrack.readyState === 'ended' || !videoTrack.enabled) {
+          console.log('🚨 Stream track ended or disabled, attempting recovery...');
+          setIsVideoPlaying(false);
+          setCameraError('Camera stream interrupted. Please restart.');
+        }
+      }, 1000);
+    }
+    
+    return () => {
+      if (streamMonitor) {
+        clearInterval(streamMonitor);
+      }
+    };
+  }, [mediaStream, isVideoPlaying]);
+
+  // Cleanup on unmount with proper track stopping
   useEffect(() => {
     return () => {
+      // Stop all media streams properly
       if (mediaStream) {
-        mediaStream.getTracks().forEach(track => track.stop());
+        console.log('🧹 Cleaning up media stream on unmount');
+        mediaStream.getTracks().forEach(track => {
+          console.log(`⏹️ Stopping ${track.kind} track:`, track.readyState);
+          track.stop();
+        });
       }
+      
+      // Clear all intervals
       if (processingInterval) {
         clearInterval(processingInterval);
       }
+      
+      // Clear any auto-confirm timers
+      if (autoConfirmTimer) {
+        clearTimeout(autoConfirmTimer);
+      }
     };
-  }, [mediaStream, processingInterval]);
+  }, []);
 
   const loadStudents = async () => {
     try {
@@ -263,11 +300,31 @@ const EnhancedAttendanceSystem: React.FC = () => {
     try {
       console.log('🎥 Starting camera access...');
       setCameraError(null);
+      setIsVideoPlaying(false);
+      setIsAIActive(false);
       
-      // Stop any existing streams first
+      // Comprehensive cleanup of existing streams and listeners
       if (mediaStream) {
-        mediaStream.getTracks().forEach(track => track.stop());
+        console.log('🧹 Cleaning up existing stream...');
+        mediaStream.getTracks().forEach(track => {
+          console.log(`⏹️ Stopping existing ${track.kind} track`);
+          track.stop();
+        });
         setMediaStream(null);
+      }
+      
+      // Reset video element completely to avoid cached states
+      if (videoRef.current) {
+        const video = videoRef.current;
+        
+        // Remove all existing event listeners to prevent conflicts
+        const newVideo = video.cloneNode(true) as HTMLVideoElement;
+        video.parentNode?.replaceChild(newVideo, video);
+        
+        // Update ref to point to new video element
+        (videoRef as any).current = newVideo;
+        
+        console.log('🔄 Video element reset with cloneNode()');
       }
       
       // Request camera permissions with better constraints
@@ -291,78 +348,155 @@ const EnhancedAttendanceSystem: React.FC = () => {
         trackSettings: stream.getVideoTracks()[0]?.getSettings()
       });
       
-      // Set stream state immediately
+      // Verify stream tracks are active
+      const videoTrack = stream.getVideoTracks()[0];
+      if (!videoTrack || videoTrack.readyState === 'ended') {
+        throw new Error('Video track is not active');
+      }
+      
+      // Set stream state
       setMediaStream(stream);
       
-      // Set up video element
+      // Set up video element with comprehensive event handling
       if (videoRef.current) {
         const video = videoRef.current;
         
-        // Configure video element first
+        // Configure video element properties
         video.muted = true;
         video.playsInline = true;
         video.autoplay = true;
+        video.controls = false;
         
-        // Set up event handlers before setting srcObject
-        const handleLoadedMetadata = () => {
-          console.log('📺 Video metadata loaded:', {
-            width: video.videoWidth,
-            height: video.videoHeight,
-            readyState: video.readyState
+        // State management flags to prevent race conditions
+        let videoLoaded = false;
+        let playStarted = false;
+        
+        // Define event handlers with proper cleanup tracking
+        const eventHandlers = {
+          loadstart: () => {
+            console.log('📹 Video load started');
+          },
+          
+          loadedmetadata: () => {
+            console.log('📺 Video metadata loaded:', {
+              width: video.videoWidth,
+              height: video.videoHeight,
+              readyState: video.readyState,
+              duration: video.duration
+            });
+            videoLoaded = true;
+          },
+          
+          loadeddata: () => {
+            console.log('📊 Video data loaded, attempting to play...');
+            if (videoLoaded && !playStarted) {
+              playStarted = true;
+              video.play().catch(error => {
+                console.error('❌ Auto play failed:', error);
+                setCameraError('Video play failed. Click to start manually.');
+                playStarted = false;
+              });
+            }
+          },
+          
+          canplay: () => {
+            console.log('▶️ Video can play');
+            if (!playStarted) {
+              playStarted = true;
+              video.play().catch(error => {
+                console.error('❌ Auto play failed on canplay:', error);
+                setCameraError('Video play failed. Click to start manually.');
+                playStarted = false;
+              });
+            }
+          },
+          
+          play: () => {
+            console.log('� Video play event fired');
+            setIsVideoPlaying(true);
+            setIsAIActive(true);
+            setCameraError(null);
+            
+            // Start face detection after video is stable
+            setTimeout(() => {
+              startFaceDetection();
+            }, 1000);
+          },
+          
+          playing: () => {
+            console.log('🎬 Video playing event - stream is stable');
+            setIsVideoPlaying(true);
+            setIsAIActive(true);
+          },
+          
+          pause: () => {
+            console.log('⏸️ Video pause event fired');
+            setIsVideoPlaying(false);
+          },
+          
+          ended: () => {
+            console.log('🏁 Video ended event fired');
+            setIsVideoPlaying(false);
+            setCameraError('Video stream ended unexpectedly');
+          },
+          
+          error: (e: any) => {
+            console.error('❌ Video error:', e, video.error);
+            setCameraError(`Video error: ${video.error?.message || 'Unknown error'}`);
+            setIsVideoPlaying(false);
+            setIsAIActive(false);
+          },
+          
+          stalled: () => {
+            console.warn('⚠️ Video stalled');
+            setCameraError('Video stream stalled. Checking connection...');
+          },
+          
+          waiting: () => {
+            console.log('⏳ Video waiting for data');
+          },
+          
+          abort: () => {
+            console.warn('🚫 Video loading aborted');
+            setCameraError('Video loading was interrupted');
+          }
+        };
+        
+        // Add all event listeners
+        Object.entries(eventHandlers).forEach(([event, handler]) => {
+          video.addEventListener(event, handler);
+        });
+        
+        // Store cleanup function on video element for later use
+        (video as any).cleanup = () => {
+          console.log('🧹 Cleaning up video event listeners');
+          Object.entries(eventHandlers).forEach(([event, handler]) => {
+            video.removeEventListener(event, handler);
           });
-          
-          // Video is ready, start playing
-          setIsVideoPlaying(true);
-          setIsAIActive(true);
-          console.log('🎬 Video ready and playing');
-          
-          // Start face detection
-          setTimeout(() => {
-            startFaceDetection();
-          }, 1000); // Give video a moment to stabilize
         };
-
-        const handlePlay = () => {
-          console.log('🎵 Video play event fired');
-          setIsVideoPlaying(true);
-        };
-
-        const handlePause = () => {
-          console.log('⏸️ Video pause event fired');
-          setIsVideoPlaying(false);
-        };
-
-        const handleError = (e: any) => {
-          console.error('❌ Video error:', e);
-          setCameraError('Video error occurred');
-          setIsVideoPlaying(false);
-        };
-
-        // Remove any existing event listeners
-        video.removeEventListener('loadedmetadata', handleLoadedMetadata);
-        video.removeEventListener('play', handlePlay);
-        video.removeEventListener('pause', handlePause);
-        video.removeEventListener('error', handleError);
-
-        // Add event listeners
-        video.addEventListener('loadedmetadata', handleLoadedMetadata);
-        video.addEventListener('play', handlePlay);
-        video.addEventListener('pause', handlePause);
-        video.addEventListener('error', handleError);
         
-        // Set the stream - this should trigger loadedmetadata
+        // Set the stream - this should trigger the event cascade
         video.srcObject = stream;
-        console.log('📹 Video srcObject set, waiting for metadata...');
+        console.log('📹 Video srcObject set, waiting for events...');
         
-        // Force play attempt after a short delay
+        // Monitor stream tracks for unexpected endings
+        videoTrack.addEventListener('ended', () => {
+          console.log('🚨 Video track ended unexpectedly');
+          setCameraError('Camera was disconnected or stopped by another application');
+          setIsVideoPlaying(false);
+          setIsAIActive(false);
+        });
+        
+        // Fallback timeout to detect issues
         setTimeout(() => {
-          if (video.paused) {
+          if (!playStarted && !cameraError) {
+            console.log('⏰ Fallback: Attempting manual play after timeout');
             video.play().catch(error => {
-              console.error('❌ Auto play failed:', error);
-              setCameraError('Video play failed. Click to start manually.');
+              console.error('❌ Fallback play failed:', error);
+              setCameraError('Video failed to start. Click to play manually.');
             });
           }
-        }, 500);
+        }, 3000);
       }
       
     } catch (error) {
@@ -383,6 +517,11 @@ const EnhancedAttendanceSystem: React.FC = () => {
           case 'NotReadableError':
             errorMessage = 'Camera is already in use by another application.';
             break;
+          case 'OverconstrainedError':
+            errorMessage = 'Camera constraints could not be satisfied. Trying with basic settings...';
+            // Retry with basic constraints
+            setTimeout(() => startAIAttendanceWithBasicConstraints(), 1000);
+            return;
           default:
             errorMessage = `Camera error: ${error.message}`;
         }
@@ -391,98 +530,281 @@ const EnhancedAttendanceSystem: React.FC = () => {
       setCameraError(errorMessage);
       setIsAIActive(false);
       setIsVideoPlaying(false);
+      setMediaStream(null);
+    }
+  };
+
+  // Fallback function with basic constraints
+  const startAIAttendanceWithBasicConstraints = async () => {
+    try {
+      console.log('🔄 Retrying with basic camera constraints...');
+      const basicConstraints = {
+        video: {
+          width: 640,
+          height: 480,
+          facingMode: 'user'
+        },
+        audio: false
+      };
+      
+      const stream = await navigator.mediaDevices.getUserMedia(basicConstraints);
+      setMediaStream(stream);
+      
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+      }
+      
+      setCameraError(null);
+    } catch (error) {
+      console.error('❌ Basic constraints also failed:', error);
+      setCameraError('Camera initialization failed completely. Please check your camera.');
     }
   };
 
   const handleManualPlay = async () => {
     if (!videoRef.current || !mediaStream) {
-      console.error('❌ Video or stream not available');
+      console.error('❌ Video or stream not available for manual play');
+      setCameraError('Video or camera stream not available');
       return;
     }
 
     try {
       const video = videoRef.current;
       
-      // Ensure stream is set
+      console.log('🎮 Manual play initiated');
+      console.log('📊 Stream state:', {
+        active: mediaStream.active,
+        tracks: mediaStream.getTracks().length,
+        videoTrackState: mediaStream.getVideoTracks()[0]?.readyState
+      });
+      
+      // Verify stream is still active
+      const videoTrack = mediaStream.getVideoTracks()[0];
+      if (!videoTrack || videoTrack.readyState === 'ended') {
+        throw new Error('Video track is no longer active');
+      }
+      
+      // Ensure stream is properly set
       if (video.srcObject !== mediaStream) {
+        console.log('🔄 Resetting video srcObject');
         video.srcObject = mediaStream;
       }
       
-      // Configure and play
+      // Configure video properties
       video.muted = true;
       video.playsInline = true;
+      video.controls = false;
       
+      // Check if video is already playing
+      if (!video.paused) {
+        console.log('▶️ Video is already playing');
+        setIsVideoPlaying(true);
+        setIsAIActive(true);
+        setCameraError(null);
+        return;
+      }
+      
+      // Attempt to play with comprehensive error handling
+      console.log('▶️ Attempting manual video play...');
       await video.play();
-      console.log('✅ Manual play successful');
       
+      console.log('✅ Manual play successful');
       setIsVideoPlaying(true);
       setIsAIActive(true);
       setCameraError(null);
-      startFaceDetection();
+      
+      // Start face detection
+      setTimeout(() => {
+        startFaceDetection();
+      }, 500);
       
     } catch (error) {
       console.error('❌ Manual play failed:', error);
-      setCameraError('Could not start video playback');
+      
+      let errorMessage = 'Could not start video playback';
+      if (error instanceof Error) {
+        switch (error.name) {
+          case 'NotAllowedError':
+            errorMessage = 'Video play not allowed. Please enable autoplay or try again.';
+            break;
+          case 'AbortError':
+            errorMessage = 'Video play was interrupted. Please try again.';
+            break;
+          case 'NotSupportedError':
+            errorMessage = 'Video format not supported.';
+            break;
+          default:
+            errorMessage = `Video play error: ${error.message}`;
+        }
+      }
+      
+      setCameraError(errorMessage);
+      setIsVideoPlaying(false);
+      setIsAIActive(false);
     }
   };
 
   const stopAIAttendance = () => {
-    console.log('🛑 Stopping AI attendance');
+    console.log('🛑 Stopping AI attendance with comprehensive cleanup');
     
-    // Stop media stream
-    if (mediaStream) {
-      mediaStream.getTracks().forEach(track => {
-        track.stop();
-        console.log('⏹️ Stopped track:', track.kind);
-      });
-      setMediaStream(null);
-    }
-    
-    // Clear video element
-    if (videoRef.current) {
-      const video = videoRef.current;
-      video.srcObject = null;
-      
-      // Call cleanup if it exists
-      if ((video as any).cleanup) {
-        (video as any).cleanup();
-      }
-    }
-    
-    // Stop processing
+    // Stop processing intervals first
     if (processingInterval) {
       clearInterval(processingInterval);
       setProcessingInterval(null);
+      console.log('⏹️ Stopped face detection interval');
     }
     
     if (autoConfirmTimer) {
       clearTimeout(autoConfirmTimer);
       setAutoConfirmTimer(null);
+      console.log('⏹️ Cleared auto-confirm timer');
     }
     
-    // Reset states
+    // Stop media stream tracks properly
+    if (mediaStream) {
+      console.log('🧹 Stopping media stream tracks...');
+      const tracks = mediaStream.getTracks();
+      tracks.forEach(track => {
+        console.log(`⏹️ Stopping ${track.kind} track - readyState: ${track.readyState}`);
+        if (track.readyState !== 'ended') {
+          track.stop();
+        }
+      });
+      setMediaStream(null);
+    }
+    
+    // Clean up video element thoroughly
+    if (videoRef.current) {
+      const video = videoRef.current;
+      
+      console.log('🧹 Cleaning up video element...');
+      
+      // Remove all event listeners using stored cleanup function
+      if ((video as any).cleanup) {
+        (video as any).cleanup();
+        console.log('✅ Video event listeners cleaned up');
+      }
+      
+      // Reset video element
+      video.pause();
+      video.srcObject = null;
+      video.load(); // Reset the video element state
+      
+      // Additional cleanup
+      if (video.src) {
+        URL.revokeObjectURL(video.src);
+        video.removeAttribute('src');
+      }
+      
+      console.log('✅ Video element reset complete');
+    }
+    
+    // Reset all states
     setIsAIActive(false);
     setIsVideoPlaying(false);
     setFaceDetections([]);
     setCameraError(null);
+    
+    // Reset session stats
+    setSessionStats({
+      detectedCount: 0,
+      confirmedCount: 0,
+      unknownCount: 0,
+      sessionDuration: 0
+    });
+    
+    console.log('✅ AI attendance stopped and cleaned up completely');
   };
 
   const startFaceDetection = () => {
+    // Clear any existing intervals to prevent duplicates
     if (processingInterval) {
+      console.log('🧹 Clearing existing face detection interval');
       clearInterval(processingInterval);
+      setProcessingInterval(null);
     }
     
-    if (!faceServiceInitialized || !videoRef.current) {
-      console.log('Face service not ready or video not available');
+    if (!faceServiceInitialized || !videoRef.current || !mediaStream) {
+      console.log('❌ Face detection prerequisites not met:', {
+        faceServiceInitialized,
+        videoElement: !!videoRef.current,
+        mediaStream: !!mediaStream
+      });
       return;
     }
     
-    console.log('🤖 Starting real face detection with face-api.js');
+    // Verify video and stream are ready
+    const video = videoRef.current;
+    const videoTrack = mediaStream.getVideoTracks()[0];
+    
+    if (!videoTrack || videoTrack.readyState === 'ended') {
+      console.log('❌ Video track not ready for face detection');
+      setCameraError('Camera track is not active');
+      return;
+    }
+    
+    if (video.readyState < 3) { // HAVE_FUTURE_DATA
+      console.log('⏳ Video not ready yet, waiting...');
+      setTimeout(() => startFaceDetection(), 1000);
+      return;
+    }
+    
+    console.log('🤖 Starting face detection with health monitoring');
+    console.log('📊 Video state:', {
+      readyState: video.readyState,
+      videoWidth: video.videoWidth,
+      videoHeight: video.videoHeight,
+      paused: video.paused,
+      ended: video.ended
+    });
+    
+    let consecutiveErrors = 0;
+    const maxConsecutiveErrors = 5;
+    
     const interval = setInterval(async () => {
-      await performFaceRecognition();
+      try {
+        // Health check before processing
+        if (!mediaStream || !videoRef.current || !isAIActive) {
+          console.log('🛑 Face detection stopped - prerequisites no longer met');
+          clearInterval(interval);
+          setProcessingInterval(null);
+          return;
+        }
+        
+        const currentVideoTrack = mediaStream.getVideoTracks()[0];
+        if (!currentVideoTrack || currentVideoTrack.readyState === 'ended') {
+          console.log('🚨 Video track ended during face detection');
+          setCameraError('Camera track ended unexpectedly');
+          clearInterval(interval);
+          setProcessingInterval(null);
+          return;
+        }
+        
+        const video = videoRef.current;
+        if (video.paused || video.ended || video.readyState < 3) {
+          console.log('⚠️ Video not in playable state, skipping detection');
+          return;
+        }
+        
+        // Perform face recognition
+        await performFaceRecognition();
+        consecutiveErrors = 0; // Reset error count on success
+        
+      } catch (error) {
+        consecutiveErrors++;
+        console.error(`❌ Face detection error (${consecutiveErrors}/${maxConsecutiveErrors}):`, error);
+        
+        if (consecutiveErrors >= maxConsecutiveErrors) {
+          console.log('🚨 Too many consecutive face detection errors, stopping');
+          setFaceServiceError(`Face detection failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+          clearInterval(interval);
+          setProcessingInterval(null);
+        }
+      }
     }, 1000); // Check every second
     
     setProcessingInterval(interval);
+    console.log('✅ Face detection interval started');
   };
 
   // Real face detection using face-api.js
@@ -815,12 +1137,28 @@ const EnhancedAttendanceSystem: React.FC = () => {
                 </div>
               )}
               
-              {/* Stream status indicator */}
+              {/* Stream status indicator with debug info */}
               {mediaStream && (
                 <div className="absolute top-4 left-4 z-20">
-                  <div className="flex items-center gap-2 bg-green-500/90 text-white px-3 py-1 rounded-full text-sm">
-                    <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
-                    <span>CONNECTED</span>
+                  <div className="flex flex-col gap-2">
+                    <div className="flex items-center gap-2 bg-green-500/90 text-white px-3 py-1 rounded-full text-sm">
+                      <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
+                      <span>CONNECTED</span>
+                    </div>
+                    
+                    {/* Debug info panel */}
+                    <div className="bg-black/70 text-white text-xs p-2 rounded-lg backdrop-blur-sm">
+                      <div>Stream: {mediaStream.active ? '✅ Active' : '❌ Inactive'}</div>
+                      <div>Tracks: {mediaStream.getTracks().length}</div>
+                      <div>Video: {isVideoPlaying ? '▶️ Playing' : '⏸️ Paused'}</div>
+                      <div>AI: {isAIActive ? '🤖 Active' : '😴 Inactive'}</div>
+                      {videoRef.current && (
+                        <>
+                          <div>Ready State: {videoRef.current.readyState}</div>
+                          <div>Size: {videoRef.current.videoWidth}x{videoRef.current.videoHeight}</div>
+                        </>
+                      )}
+                    </div>
                   </div>
                 </div>
               )}
