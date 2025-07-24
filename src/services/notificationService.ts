@@ -7,7 +7,7 @@ interface NotificationUpdate {
 }
 
 class NotificationService {
-  private baseUrl = import.meta.env.VITE_API_URL || 'http://10.0.44.48:5000/edu-platform/v1';
+  private baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/edu-platform/v1';
 
   async getImportantUpdates(childId: number | undefined): Promise<NotificationUpdate[]> {
     try {

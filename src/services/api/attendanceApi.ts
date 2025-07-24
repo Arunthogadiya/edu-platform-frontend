@@ -5,6 +5,8 @@ interface AttendanceRecord {
   status: 'present' | 'absence';
   notes: string;
   attendance_date: string;
+  class_value: string;
+  section: string;
 }
 
 interface ClassAttendanceRecord {

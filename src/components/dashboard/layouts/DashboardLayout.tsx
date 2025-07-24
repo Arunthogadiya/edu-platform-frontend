@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Menu, X, User, LogOut, Layout, GraduationCap, Calendar, MessageSquare, Bot, Users, HelpCircle, Home, Brain, Star, Trophy, Book } from 'lucide-react';
+import { Menu, X, User, LogOut, Search, Bell, Settings, ChevronRight, GraduationCap, Calendar, MessageSquare, Users, Brain, Award, Activity, BookOpen, HelpCircle } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import DashboardErrorBoundary from '../parent/DashboardErrorBoundary';
 import VoiceQuery from '../parent/VoiceQuery';
 import NotificationBell from '../../common/NotificationBell';
+import Sidebar from './Sidebar';
 
 interface DashboardLayoutProps {
   children?: React.ReactNode;
@@ -13,6 +14,7 @@ interface DashboardLayoutProps {
 const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, userType }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const [isCollapsed, setIsCollapsed] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
   const userData = JSON.parse(localStorage.getItem('userData') || 'null');
@@ -23,14 +25,18 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, userType })
     const handleResize = () => {
       const mobile = window.innerWidth < 768;
       setIsMobile(mobile);
-      if (!mobile && !isSidebarOpen) {
+      if (mobile) {
+        setIsCollapsed(true);
+        setIsSidebarOpen(false);
+      } else {
         setIsSidebarOpen(true);
       }
     };
 
     window.addEventListener('resize', handleResize);
+    handleResize(); // Call once on mount
     return () => window.removeEventListener('resize', handleResize);
-  }, [isSidebarOpen]);
+  }, []);
 
   // Check authentication
   useEffect(() => {
@@ -60,97 +66,205 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, userType })
     }
   };
 
-  const menuItems = isTeacherDashboard ? [
-    { 
-      id: 'dashboard', 
-      icon: Home, 
-      label: 'Home', 
-      description: 'Back to main dashboard', 
-      path: '/teacher/dashboard',
-      color: 'text-blue-600',
-      bgColor: 'hover:bg-blue-50'
-    },
-    // Only show relevant menu items for teachers
-    { 
-      id: 'academics', 
-      icon: GraduationCap, 
-      label: 'Student Performance', 
-      description: 'Track academic progress', 
-      path: '/teacher/dashboard/performance',
-      color: 'text-purple-600',
-      bgColor: 'hover:bg-purple-50'
-    },
-    { 
-      id: 'attendance', 
-      icon: Calendar, 
-      label: 'Attendance', 
-      description: 'Manage attendance', 
-      path: '/teacher/dashboard/attendance',
-      color: 'text-green-600',
-      bgColor: 'hover:bg-green-50'
-    },
-    { 
-      id: 'messages', 
-      icon: MessageSquare, 
-      label: 'Communication', 
-      description: 'Messages & announcements', 
-      path: '/teacher/dashboard/communication',
-      color: 'text-yellow-600',
-      bgColor: 'hover:bg-yellow-50'
-    },
-    { 
-      id: 'behavior', 
-      icon: Brain, 
-      label: 'Behavior Tracking', 
-      description: 'Monitor student behavior', 
-      path: '/teacher/dashboard/behavior',
-      color: 'text-rose-600',
-      bgColor: 'hover:bg-rose-50'
-    },
-    { 
-      id: 'resources', 
-      icon: Layout, 
-      label: 'Learning Resources', 
-      description: 'Manage learning materials', 
-      path: '/teacher/dashboard/resources',
-      color: 'text-emerald-600',
-      bgColor: 'hover:bg-emerald-50'
-    },
-    { 
-      id: 'activities', 
-      icon: Trophy, 
-      label: 'Activities', 
-      description: 'Track student achievements', 
-      path: '/teacher/dashboard/activities',
-      color: 'text-amber-600',
-      bgColor: 'hover:bg-amber-50'
-    },
-    { 
-      id: 'events', 
-      icon: Calendar, 
-      label: 'Events & Assessments', 
-      description: 'Manage class events', 
-      path: '/teacher/dashboard/events',
-      color: 'text-purple-600',
-      bgColor: 'hover:bg-purple-50'
+  const handleToggleCollapse = () => {
+    setIsCollapsed(!isCollapsed);
+  };
+
+  // Generate breadcrumbs
+  const generateBreadcrumbs = () => {
+    const pathSegments = location.pathname.split('/').filter(Boolean);
+    const breadcrumbs = [
+      { label: 'Dashboard', href: '/teacher/dashboard' }
+    ];
+
+    if (pathSegments.length > 2) {
+      const currentPage = pathSegments[pathSegments.length - 1];
+      const pageLabels: { [key: string]: string } = {
+        'performance': 'Student Performance',
+        'attendance': 'Attendance Management',
+        'communication': 'Communication',
+        'behavior': 'Behavior Tracking',
+        'resources': 'Learning Resources',
+        'assessments': 'Assessments',
+        'activities': 'Activity Tracking',
+        'events': 'Events & Assessments'
+      };
+      
+      if (pageLabels[currentPage]) {
+        breadcrumbs.push({ label: pageLabels[currentPage], href: location.pathname });
+      }
     }
-  ] : [
-    // Original parent menu items
+
+    return breadcrumbs;
+  };
+
+  // Modern Teacher Layout
+  if (isTeacherDashboard) {
+    return (
+      <DashboardErrorBoundary>
+        <div className="teacher-dashboard h-screen w-screen overflow-hidden flex">
+          {/* Modern Sidebar */}
+          <Sidebar 
+            isCollapsed={isCollapsed} 
+            onToggleCollapse={handleToggleCollapse}
+            userType={userType}
+          />
+
+          {/* Main Content Area */}
+          <div className="flex-1 flex flex-col overflow-hidden">
+            {/* Enhanced Modern Header */}
+            <header className="teacher-header h-20 flex items-center justify-between px-8 relative z-10">
+              {/* Left Section - Enhanced Breadcrumbs */}
+              <div className="flex items-center space-x-6">
+                <nav className="flex items-center space-x-3 text-sm">
+                  {generateBreadcrumbs().map((crumb, index) => (
+                    <React.Fragment key={crumb.href}>
+                      {index > 0 && (
+                        <div className="w-1.5 h-1.5 bg-neutral-300 rounded-full" />
+                      )}
+                      <button
+                        onClick={() => navigate(crumb.href)}
+                        className={`px-3 py-2 rounded-lg transition-all duration-300 font-medium ${
+                          index === generateBreadcrumbs().length - 1
+                            ? 'text-primary-700 bg-primary-50 shadow-sm scale-105'
+                            : 'text-neutral-600 hover:text-primary-600 hover:bg-neutral-50'
+                        }`}
+                      >
+                        {crumb.label}
+                      </button>
+                    </React.Fragment>
+                  ))}
+                </nav>
+              </div>
+
+              {/* Center Section - Enhanced Search Bar */}
+              <div className="flex-1 max-w-lg mx-12">
+                <div className="relative group">
+                  <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-neutral-400 
+                    w-5 h-5 group-focus-within:text-primary-500 transition-colors" />
+                  <input
+                    type="text"
+                    placeholder="Search students, assignments, resources..."
+                    className="w-full pl-12 pr-6 py-4 bg-white/60 border border-neutral-200/60 
+                             rounded-2xl focus:outline-none focus:ring-4 focus:ring-primary-500/20 
+                             focus:border-primary-300 focus:bg-white backdrop-blur-sm 
+                             transition-all duration-300 text-neutral-700 placeholder-neutral-400
+                             hover:bg-white/80 hover:border-neutral-300"
+                  />
+                  {/* Search Enhancement */}
+                  <div className="absolute right-4 top-1/2 transform -translate-y-1/2">
+                    <kbd className="px-2 py-1 text-xs font-semibold text-neutral-500 bg-neutral-100 
+                      border border-neutral-200 rounded-md">⌘K</kbd>
+                  </div>
+                </div>
+              </div>
+
+              {/* Right Section - Enhanced Actions */}
+              <div className="flex items-center space-x-4">
+                {/* Notification Bell */}
+                <button className="relative p-3 rounded-2xl bg-white/60 hover:bg-white/90 
+                  transition-all duration-300 hover:scale-105 hover:shadow-md group">
+                  <Bell className="w-5 h-5 text-neutral-600 group-hover:text-primary-600" />
+                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-gradient-to-r from-coral 
+                    to-accent rounded-full flex items-center justify-center">
+                    <span className="text-white text-xs font-bold">3</span>
+                  </span>
+                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-coral rounded-full 
+                    animate-ping opacity-75"></span>
+                </button>
+                
+                {/* Settings */}
+                <button className="p-3 rounded-2xl bg-white/60 hover:bg-white/90 
+                  transition-all duration-300 hover:scale-105 hover:shadow-md group">
+                  <Settings className="w-5 h-5 text-neutral-600 group-hover:text-primary-600" />
+                </button>
+
+                {/* Enhanced User Profile */}
+                <div className="flex items-center space-x-4 px-4 py-2 bg-white/60 rounded-2xl 
+                  hover:bg-white/90 transition-all duration-300 hover:shadow-md cursor-pointer group">
+                  <div className="relative">
+                    <div className="w-10 h-10 bg-gradient-to-br from-primary-500 to-primary-700 
+                      rounded-xl flex items-center justify-center shadow-lg group-hover:shadow-xl 
+                      transition-shadow">
+                      <span className="text-white text-sm font-bold">
+                        {userData?.name?.charAt(0)?.toUpperCase() || 'T'}
+                      </span>
+                    </div>
+                    {/* Online Status */}
+                    <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-mint rounded-full 
+                      border-2 border-white shadow-sm"></div>
+                  </div>
+                  <div className="hidden lg:block">
+                    <p className="text-sm font-semibold text-neutral-900 group-hover:text-primary-700">
+                      {userData?.name || 'Teacher'}
+                    </p>
+                    <p className="text-xs text-neutral-500 group-hover:text-neutral-600">
+                      Teacher Portal • Class 6A
+                    </p>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-neutral-400 group-hover:text-primary-500 
+                    transition-colors hidden md:block" />
+                </div>
+
+                {/* Enhanced Logout */}
+                <button 
+                  onClick={handleLogout}
+                  className="p-3 rounded-2xl bg-white/60 hover:bg-red-50 hover:text-red-600 
+                    transition-all duration-300 hover:scale-105 hover:shadow-md group"
+                  aria-label="Sign out"
+                >
+                  <LogOut className="w-5 h-5 transition-colors" />
+                </button>
+              </div>
+            </header>
+
+            {/* Enhanced Content Area */}
+            <main className="flex-1 overflow-auto teacher-content bg-gradient-to-br from-neutral-50/80 to-white/80">
+              <div className="h-full relative">
+                {/* Content Background Pattern */}
+                <div className="absolute inset-0 opacity-5">
+                  <div className="absolute inset-0" style={{
+                    backgroundImage: `radial-gradient(circle at 1px 1px, #2d4a8a 1px, transparent 0)`,
+                    backgroundSize: '24px 24px'
+                  }} />
+                </div>
+                
+                {/* Main Content Container */}
+                <div className="relative z-10 h-full">
+                  {children}
+                </div>
+              </div>
+            </main>
+          </div>
+
+          {/* Mobile Overlay */}
+          {isMobile && isSidebarOpen && (
+            <div 
+              className="fixed inset-0 bg-black/50 z-40"
+              onClick={() => setIsSidebarOpen(false)}
+            />
+          )}
+        </div>
+      </DashboardErrorBoundary>
+    );
+  }
+
+  // Original Parent Layout (unchanged)
+  const menuItems = [
     { 
       id: 'dashboard', 
-      icon: Home, 
+      icon: User, 
       label: 'Home', 
       description: 'Back to main dashboard', 
       path: '/parent/dashboard',
       color: 'text-blue-600',
       bgColor: 'hover:bg-blue-50'
     },
-    // ...rest of the existing parent menu items...
     { 
       id: 'academics', 
       icon: GraduationCap, 
-      label: 'Grades & Assignments', 
-      description: 'View academic progress', 
+      label: 'Academic Performance', 
+      description: 'View grades & performance', 
       path: '/parent/dashboard/academics',
       color: 'text-purple-600',
       bgColor: 'hover:bg-purple-50'
@@ -158,8 +272,8 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, userType })
     { 
       id: 'attendance', 
       icon: Calendar, 
-      label: 'Attendance', 
-      description: 'Check daily attendance', 
+      label: 'Attendance & Behavior', 
+      description: 'Track attendance & schedule', 
       path: '/parent/dashboard/attendance',
       color: 'text-green-600',
       bgColor: 'hover:bg-green-50'
@@ -168,55 +282,64 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, userType })
       id: 'messages', 
       icon: MessageSquare, 
       label: 'Messages', 
-      description: 'Talk to teachers', 
+      description: 'Communicate with teachers', 
       path: '/parent/dashboard/messages',
-      color: 'text-yellow-600',
-      bgColor: 'hover:bg-yellow-50'
+      color: 'text-indigo-600',
+      bgColor: 'hover:bg-indigo-50'
     },
     { 
       id: 'community', 
       icon: Users, 
       label: 'Community', 
-      description: 'Connect with parents', 
+      description: 'Parent community & forums', 
       path: '/parent/dashboard/community',
-      color: 'text-indigo-600',
-      bgColor: 'hover:bg-indigo-50'
+      color: 'text-teal-600',
+      bgColor: 'hover:bg-teal-50'
+    },
+    { 
+      id: 'behavior', 
+      icon: Brain, 
+      label: 'Behavior Tracker', 
+      description: 'Monitor behavior patterns', 
+      path: '/parent/dashboard/behavior',
+      color: 'text-orange-600',
+      bgColor: 'hover:bg-orange-50'
+    },
+    { 
+      id: 'talent', 
+      icon: Award, 
+      label: 'Talent Profile', 
+      description: 'Skills & achievements', 
+      path: '/parent/dashboard/talent',
+      color: 'text-yellow-600',
+      bgColor: 'hover:bg-yellow-50'
+    },
+    { 
+      id: 'activities', 
+      icon: Activity, 
+      label: 'Activities', 
+      description: 'Extracurricular activities', 
+      path: '/parent/dashboard/activities',
+      color: 'text-pink-600',
+      bgColor: 'hover:bg-pink-50'
+    },
+    { 
+      id: 'resources', 
+      icon: BookOpen, 
+      label: 'Learning Resources', 
+      description: 'Educational materials', 
+      path: '/parent/dashboard/resources',
+      color: 'text-emerald-600',
+      bgColor: 'hover:bg-emerald-50'
     },
     { 
       id: 'helper', 
       icon: HelpCircle, 
       label: 'Help & Support', 
-      description: 'Get assistance', 
+      description: 'Get help & support', 
       path: '/parent/dashboard/helper',
-      color: 'text-red-600',
-      bgColor: 'hover:bg-red-50'
-    },
-    { 
-      id: 'behavior', 
-      icon: Brain, 
-      label: 'Behavior', 
-      description: 'Track social-emotional growth', 
-      path: '/parent/dashboard/behavior',
-      color: 'text-rose-600',
-      bgColor: 'hover:bg-rose-50'
-    },
-    { 
-      id: 'talent', 
-      icon: Star, 
-      label: 'Talent Profile', 
-      description: 'Discover potential', 
-      path: '/parent/dashboard/talent',
-      color: 'text-amber-600',
-      bgColor: 'hover:bg-amber-50'
-    },
-    { 
-      id: 'resources', 
-      icon: Book, 
-      label: 'Learning Resources', 
-      description: 'Access study materials', 
-      path: '/parent/dashboard/resources',
-      color: 'text-emerald-600',
-      bgColor: 'hover:bg-emerald-50'
+      color: 'text-gray-600',
+      bgColor: 'hover:bg-gray-50'
     }
   ];
 
@@ -237,7 +360,6 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, userType })
                 {isSidebarOpen ? <X size={24} /> : <Menu size={24} />}
               </button>
               <h1 className="ml-5 text-xl font-bold text-white truncate">
-                {/* {userData?.studentName}'s Education Portal */}
                 EngageEd
               </h1>
             </div>
@@ -262,7 +384,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, userType })
           </div>
         </nav>
         
-        {/* Sidebar */}
+        {/* Sidebar for Parent */}
         <div 
           className={`fixed left-0 top-16 h-[calc(100vh-4rem)] bg-white shadow-lg transition-all duration-300 ease-in-out z-40
             ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} 
@@ -309,20 +431,13 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, userType })
                       {item.description}
                     </div>
                   </div>
-                  {!isMobile && !isSidebarOpen && (
-                    <div className={`absolute left-full ml-2 px-2.5 py-1.5 bg-gray-800 text-white text-sm rounded-md 
-                      opacity-0 group-hover:opacity-100 transition-all duration-200 whitespace-nowrap z-50
-                      transform translate-x-1 group-hover:translate-x-0 pointer-events-none shadow-lg`}>
-                      {item.label}
-                    </div>
-                  )}
                 </button>
               );
             })}
           </div>
         </div>
 
-        {/* Main Content */}
+        {/* Main Content for Parent */}
         <main 
           className={`fixed top-16 right-0 bottom-0 overflow-auto bg-gray-50 transition-all duration-300 ease-in-out
             ${isMobile ? 'left-0' : (isSidebarOpen ? 'left-72' : 'left-20')}`}
@@ -334,7 +449,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, userType })
           </div>
         </main>
 
-        {/* Voice Query Component */}
+        {/* Voice Query Component for Parent */}
         {userType === 'parent' && <VoiceQuery onQueryResult={handleVoiceQueryResult} />}
       </div>
     </DashboardErrorBoundary>

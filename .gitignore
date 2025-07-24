@@ -4,3 +4,8 @@
 node_modules
 docs
 .env
+add-students-script.js
+add-students.html
+face-api.md
+test.ts
+public/debug-test.html

@@ -1,0 +1,1411 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { 
+  Camera, 
+  Users, 
+  CheckCircle, 
+  XCircle, 
+  Save, 
+  Play, 
+  Pause, 
+  Brain,
+  Eye,
+  Clock,
+  Settings,
+  Sparkles,
+  Target,
+  Activity,
+  Smile,
+  Frown,
+  Meh,
+  Check,
+  X,
+  RefreshCw,
+  BarChart3
+} from 'lucide-react';
+import { studentApi, Student } from '../../../../services/api/studentApi';
+import { attendanceApi } from '../../../../services/api/attendanceApi';
+import SmartAttendanceInsights from './SmartAttendanceInsights';
+import faceRecognitionService from '../../../../services/faceRecognitionService';
+
+// Add CSS animations for face recognition scanning
+const animationStyles = `
+  @keyframes scanVertical {
+    0%, 100% { top: 0%; opacity: 0.5; }
+    50% { top: 100%; opacity: 1; }
+  }
+  
+  @keyframes scanHorizontal {
+    0%, 100% { left: 0%; opacity: 0.5; }
+    50% { left: 100%; opacity: 1; }
+  }
+  
+  @keyframes pulseOverlay {
+    0% { opacity: 0.1; }
+    100% { opacity: 0.3; }
+  }
+`;
+
+// Inject styles into head once
+if (typeof document !== 'undefined') {
+  const existingStyle = document.querySelector('#face-recognition-animations');
+  if (!existingStyle) {
+    const styleElement = document.createElement('style');
+    styleElement.id = 'face-recognition-animations';
+    styleElement.textContent = animationStyles;
+    document.head.appendChild(styleElement);
+  }
+}
+
+interface AttendanceMode {
+  id: 'ai' | 'manual' | 'insights';
+  title: string;
+  description: string;
+  icon: any;
+}
+
+interface FaceDetection {
+  id: string;
+  studentId?: number;
+  studentName?: string;
+  confidence: number;
+  timestamp: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  emotion?: 'happy' | 'neutral' | 'sad';
+  status: 'detected' | 'confirmed' | 'unknown';
+}
+
+interface AIAttendanceSettings {
+  confidenceThreshold: number;
+  autoConfirmDelay: number;
+  enableAutoConfirm: boolean;
+  enableEmotionDetection: boolean;
+  enableLearning: boolean;
+}
+
+const EnhancedAttendanceSystem: React.FC = () => {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  
+  // Core state
+  const [selectedClass, setSelectedClass] = useState('6');
+  const [selectedSection, setSelectedSection] = useState('A');
+  const [students, setStudents] = useState<Student[]>([]);
+  const [attendanceMode, setAttendanceMode] = useState<'ai' | 'manual' | 'insights'>('ai');
+  const [isLoading, setIsLoading] = useState(false);
+  const [attendanceDate, setAttendanceDate] = useState(new Date().toISOString().split('T')[0]);
+  
+  // Manual attendance state
+  const [manualAttendance, setManualAttendance] = useState<{ [key: number]: 'present' | 'absence' }>({});
+  const [notes, setNotes] = useState<{ [key: number]: string }>({});
+  const [saveStatus, setSaveStatus] = useState<{ [key: number]: 'idle' | 'saving' | 'saved' | 'error' }>({});
+  
+  // AI attendance state
+  const [isAIActive, setIsAIActive] = useState(false);
+  const [mediaStream, setMediaStream] = useState<MediaStream | null>(null);
+  const [isVideoPlaying, setIsVideoPlaying] = useState(false);
+  const [cameraError, setCameraError] = useState<string | null>(null);
+
+  const [faceDetections, setFaceDetections] = useState<FaceDetection[]>([]);
+  const [aiAttendance, setAiAttendance] = useState<{ [key: number]: 'present' | 'absence' }>({});
+  const [detectionLog, setDetectionLog] = useState<Array<{
+    id: string;
+    studentName: string;
+    timestamp: string;
+    status: 'confirmed' | 'flagged' | 'unknown';
+    confidence: number;
+  }>>([]);
+  const [aiSettings, setAiSettings] = useState<AIAttendanceSettings>({
+    confidenceThreshold: 75,
+    autoConfirmDelay: 5,
+    enableAutoConfirm: true,
+    enableEmotionDetection: true,
+    enableLearning: false
+  });
+  const [autoConfirmTimer, setAutoConfirmTimer] = useState<number | null>(null);
+  const [sessionStats, setSessionStats] = useState({
+    detectedCount: 0,
+    confirmedCount: 0,
+    unknownCount: 0,
+    sessionDuration: 0
+  });
+  
+  // Face recognition service state
+  const [faceServiceInitialized, setFaceServiceInitialized] = useState(false);
+  const [faceServiceError, setFaceServiceError] = useState<string | null>(null);
+  const [processingInterval, setProcessingInterval] = useState<NodeJS.Timeout | null>(null);
+
+  const classes = ['6', '7', '8', '9', '10'];
+  const sections = ['A', 'B', 'C'];
+
+  const attendanceModes: AttendanceMode[] = [
+    {
+      id: 'ai',
+      title: 'AI Attendance',
+      description: 'Face recognition powered by smart AI',
+      icon: Brain
+    },
+    {
+      id: 'manual',
+      title: 'Manual Attendance',
+      description: 'Traditional attendance with smart assistance',
+      icon: Users
+    },
+    {
+      id: 'insights',
+      title: 'Smart Analytics',
+      description: 'AI-powered patterns and insights',
+      icon: BarChart3
+    }
+  ];
+
+  useEffect(() => {
+    if (selectedClass && selectedSection) {
+      loadStudents();
+    }
+  }, [selectedClass, selectedSection]);
+
+  useEffect(() => {
+    if (attendanceDate && selectedClass && selectedSection) {
+      loadExistingAttendance();
+    }
+  }, [attendanceDate, selectedClass, selectedSection]);
+
+  // Initialize face recognition service
+  useEffect(() => {
+    const initializeFaceService = async () => {
+      try {
+        setFaceServiceError(null);
+        console.log('Initializing face recognition service...');
+        await faceRecognitionService.loadModels();
+        setFaceServiceInitialized(true);
+        console.log('Face recognition service initialized successfully');
+      } catch (error) {
+        console.error('Failed to initialize face recognition service:', error);
+        setFaceServiceError(error instanceof Error ? error.message : 'Failed to initialize face recognition');
+        setFaceServiceInitialized(false);
+      }
+    };
+
+    initializeFaceService();
+  }, []);
+
+  // Cleanup camera on unmount
+  useEffect(() => {
+    return () => {
+      if (mediaStream) {
+        mediaStream.getTracks().forEach(track => track.stop());
+      }
+      if (processingInterval) {
+        clearInterval(processingInterval);
+      }
+    };
+  }, [mediaStream, processingInterval]);
+
+  const loadStudents = async () => {
+    try {
+      setIsLoading(true);
+      const data = await studentApi.getStudents(selectedClass, selectedSection);
+      setStudents(data);
+      
+      // Initialize attendance states
+      const initialAttendance = data.reduce((acc: { [key: number]: 'present' | 'absence' }, student: Student) => {
+        acc[student.student_id] = 'present';
+        return acc;
+      }, {} as { [key: number]: 'present' | 'absence' });
+      
+      setManualAttendance(initialAttendance);
+      setAiAttendance(initialAttendance);
+    } catch (error) {
+      console.error('Error loading students:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const loadExistingAttendance = async () => {
+    try {
+      setIsLoading(true);
+      const response = await attendanceApi.getAttendanceByDate(
+        attendanceDate,
+        selectedClass,
+        selectedSection
+      );
+      
+      const records = Array.isArray(response) ? response : [];
+
+      const attendanceMap: { [key: number]: 'present' | 'absence' } = {};
+      const notesMap: { [key: number]: string } = {};
+
+      records.forEach((record: any) => {
+        if (record && record.student_id) {
+          attendanceMap[record.student_id] = record.status;
+          notesMap[record.student_id] = record.notes || '';
+          setSaveStatus(prev => ({
+            ...prev,
+            [record.student_id]: 'saved'
+          }));
+        }
+      });
+
+      setManualAttendance(attendanceMap);
+      setAiAttendance(attendanceMap);
+      setNotes(notesMap);
+    } catch (error) {
+      console.error('Error loading existing attendance:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const startAIAttendance = async () => {
+    try {
+      console.log('🎥 Starting camera access...');
+      setCameraError(null);
+      
+      // Stop any existing streams first
+      if (mediaStream) {
+        mediaStream.getTracks().forEach(track => track.stop());
+        setMediaStream(null);
+      }
+      
+      // Request camera permissions with better constraints
+      const constraints = {
+        video: {
+          width: { ideal: 1280, min: 640, max: 1920 },
+          height: { ideal: 720, min: 480, max: 1080 },
+          frameRate: { ideal: 30, min: 15, max: 60 },
+          facingMode: 'user'
+        },
+        audio: false
+      };
+      
+      console.log('📱 Requesting user media with constraints:', constraints);
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      
+      console.log('✅ Camera stream obtained successfully');
+      console.log('📹 Stream details:', {
+        active: stream.active,
+        tracks: stream.getVideoTracks().length,
+        trackSettings: stream.getVideoTracks()[0]?.getSettings()
+      });
+      
+      // Set stream state immediately
+      setMediaStream(stream);
+      
+      // Set up video element
+      if (videoRef.current) {
+        const video = videoRef.current;
+        
+        // Configure video element first
+        video.muted = true;
+        video.playsInline = true;
+        video.autoplay = true;
+        
+        // Set up event handlers before setting srcObject
+        const handleLoadedMetadata = () => {
+          console.log('📺 Video metadata loaded:', {
+            width: video.videoWidth,
+            height: video.videoHeight,
+            readyState: video.readyState
+          });
+          
+          // Video is ready, start playing
+          setIsVideoPlaying(true);
+          setIsAIActive(true);
+          console.log('🎬 Video ready and playing');
+          
+          // Start face detection
+          setTimeout(() => {
+            startFaceDetection();
+          }, 1000); // Give video a moment to stabilize
+        };
+
+        const handlePlay = () => {
+          console.log('🎵 Video play event fired');
+          setIsVideoPlaying(true);
+        };
+
+        const handlePause = () => {
+          console.log('⏸️ Video pause event fired');
+          setIsVideoPlaying(false);
+        };
+
+        const handleError = (e: any) => {
+          console.error('❌ Video error:', e);
+          setCameraError('Video error occurred');
+          setIsVideoPlaying(false);
+        };
+
+        // Remove any existing event listeners
+        video.removeEventListener('loadedmetadata', handleLoadedMetadata);
+        video.removeEventListener('play', handlePlay);
+        video.removeEventListener('pause', handlePause);
+        video.removeEventListener('error', handleError);
+
+        // Add event listeners
+        video.addEventListener('loadedmetadata', handleLoadedMetadata);
+        video.addEventListener('play', handlePlay);
+        video.addEventListener('pause', handlePause);
+        video.addEventListener('error', handleError);
+        
+        // Set the stream - this should trigger loadedmetadata
+        video.srcObject = stream;
+        console.log('📹 Video srcObject set, waiting for metadata...');
+        
+        // Force play attempt after a short delay
+        setTimeout(() => {
+          if (video.paused) {
+            video.play().catch(error => {
+              console.error('❌ Auto play failed:', error);
+              setCameraError('Video play failed. Click to start manually.');
+            });
+          }
+        }, 500);
+      }
+      
+    } catch (error) {
+      console.error('❌ Camera access failed:', error);
+      let errorMessage = 'Unknown camera error';
+      
+      if (error instanceof Error) {
+        switch (error.name) {
+          case 'NotAllowedError':
+            errorMessage = 'Camera access denied. Please allow camera permissions and try again.';
+            break;
+          case 'NotFoundError':
+            errorMessage = 'No camera found. Please connect a camera and try again.';
+            break;
+          case 'NotSupportedError':
+            errorMessage = 'Camera not supported by this browser.';
+            break;
+          case 'NotReadableError':
+            errorMessage = 'Camera is already in use by another application.';
+            break;
+          default:
+            errorMessage = `Camera error: ${error.message}`;
+        }
+      }
+      
+      setCameraError(errorMessage);
+      setIsAIActive(false);
+      setIsVideoPlaying(false);
+    }
+  };
+
+  const handleManualPlay = async () => {
+    if (!videoRef.current || !mediaStream) {
+      console.error('❌ Video or stream not available');
+      return;
+    }
+
+    try {
+      const video = videoRef.current;
+      
+      // Ensure stream is set
+      if (video.srcObject !== mediaStream) {
+        video.srcObject = mediaStream;
+      }
+      
+      // Configure and play
+      video.muted = true;
+      video.playsInline = true;
+      
+      await video.play();
+      console.log('✅ Manual play successful');
+      
+      setIsVideoPlaying(true);
+      setIsAIActive(true);
+      setCameraError(null);
+      startFaceDetection();
+      
+    } catch (error) {
+      console.error('❌ Manual play failed:', error);
+      setCameraError('Could not start video playback');
+    }
+  };
+
+  const stopAIAttendance = () => {
+    console.log('🛑 Stopping AI attendance');
+    
+    // Stop media stream
+    if (mediaStream) {
+      mediaStream.getTracks().forEach(track => {
+        track.stop();
+        console.log('⏹️ Stopped track:', track.kind);
+      });
+      setMediaStream(null);
+    }
+    
+    // Clear video element
+    if (videoRef.current) {
+      const video = videoRef.current;
+      video.srcObject = null;
+      
+      // Call cleanup if it exists
+      if ((video as any).cleanup) {
+        (video as any).cleanup();
+      }
+    }
+    
+    // Stop processing
+    if (processingInterval) {
+      clearInterval(processingInterval);
+      setProcessingInterval(null);
+    }
+    
+    if (autoConfirmTimer) {
+      clearTimeout(autoConfirmTimer);
+      setAutoConfirmTimer(null);
+    }
+    
+    // Reset states
+    setIsAIActive(false);
+    setIsVideoPlaying(false);
+    setFaceDetections([]);
+    setCameraError(null);
+  };
+
+  const startFaceDetection = () => {
+    if (processingInterval) {
+      clearInterval(processingInterval);
+    }
+    
+    if (!faceServiceInitialized || !videoRef.current) {
+      console.log('Face service not ready or video not available');
+      return;
+    }
+    
+    console.log('🤖 Starting real face detection with face-api.js');
+    const interval = setInterval(async () => {
+      await performFaceRecognition();
+    }, 1000); // Check every second
+    
+    setProcessingInterval(interval);
+  };
+
+  // Real face detection using face-api.js
+  const performFaceRecognition = async () => {
+    if (!isAIActive || !faceServiceInitialized || !videoRef.current) return;
+
+    try {
+      // Perform face recognition on the video element
+      const recognitionResults = await faceRecognitionService.detectAndRecognizeFaces(
+        videoRef.current,
+        {
+          confidenceThreshold: aiSettings.confidenceThreshold / 100, // Convert percentage to decimal
+          enableLandmarks: true,
+          enableExpressions: aiSettings.enableEmotionDetection
+        }
+      );
+
+      // Convert face-api.js results to our FaceDetection format
+      const detections: FaceDetection[] = recognitionResults.map(result => {
+        // Find matching student by name
+        const matchingStudent = students.find(s => 
+          s.student_name.toLowerCase().includes(result.name.toLowerCase()) ||
+          result.name.toLowerCase().includes(s.student_name.toLowerCase())
+        );
+
+        const confidence = Math.round(result.confidence * 100);
+        const detection: FaceDetection = {
+          id: Date.now().toString() + Math.random(),
+          studentId: matchingStudent?.student_id,
+          studentName: matchingStudent?.student_name || result.name,
+          confidence,
+          timestamp: new Date().toLocaleTimeString(),
+          x: result.box.x,
+          y: result.box.y,
+          width: result.box.width,
+          height: result.box.height,
+          emotion: getEmotionFromExpressions(result.expressions),
+          status: confidence >= aiSettings.confidenceThreshold ? 'detected' : 'unknown'
+        };
+
+        return detection;
+      });
+
+      // Update face detections state
+      setFaceDetections(detections);
+
+      // Process confirmed detections
+      for (const detection of detections) {
+        if (detection.status === 'detected' && detection.studentId) {
+          // Check if this student hasn't been marked present yet
+          if (aiAttendance[detection.studentId] !== 'present') {
+            addToDetectionLog(detection);
+            
+            if (aiSettings.enableAutoConfirm) {
+              setTimeout(() => confirmDetection(detection), aiSettings.autoConfirmDelay * 1000);
+            }
+          }
+        }
+
+        setSessionStats(prev => ({
+          ...prev,
+          detectedCount: prev.detectedCount + 1,
+          unknownCount: detection.status === 'unknown' ? prev.unknownCount + 1 : prev.unknownCount
+        }));
+      }
+
+    } catch (error) {
+      console.error('Face recognition error:', error);
+      setFaceServiceError(error instanceof Error ? error.message : 'Face recognition failed');
+    }
+  };
+
+  // Helper function to convert face-api.js expressions to our emotion format
+  const getEmotionFromExpressions = (expressions: any): 'happy' | 'neutral' | 'sad' => {
+    if (!expressions) return 'neutral';
+    
+    // Find the expression with highest confidence
+    const expressionEntries = Object.entries(expressions) as [string, number][];
+    const topExpression = expressionEntries.reduce((max, [expr, confidence]) => 
+      confidence > max.confidence ? { expression: expr, confidence } : max
+    , { expression: 'neutral', confidence: 0 });
+
+    // Map face-api.js expressions to our simplified emotions
+    switch (topExpression.expression) {
+      case 'happy':
+      case 'surprised':
+        return 'happy';
+      case 'sad':
+      case 'angry':
+      case 'disgusted':
+      case 'fearful':
+        return 'sad';
+      default:
+        return 'neutral';
+    }
+  };
+
+  const addToDetectionLog = (detection: FaceDetection) => {
+    const logEntry = {
+      id: detection.id,
+      studentName: detection.studentName || 'Unknown',
+      timestamp: detection.timestamp,
+      status: 'confirmed' as const,
+      confidence: detection.confidence
+    };
+
+    setDetectionLog(prev => [logEntry, ...prev.slice(0, 9)]);
+  };
+
+  const confirmDetection = (detection: FaceDetection) => {
+    if (detection.studentId) {
+      setAiAttendance(prev => ({
+        ...prev,
+        [detection.studentId!]: 'present'
+      }));
+
+      setSessionStats(prev => ({
+        ...prev,
+        confirmedCount: prev.confirmedCount + 1
+      }));
+
+      setDetectionLog(prev => prev.map(log => 
+        log.id === detection.id 
+          ? { ...log, status: 'confirmed' as const }
+          : log
+      ));
+
+      setFaceDetections(prev => prev.filter(d => d.id !== detection.id));
+    }
+  };
+
+  const handleManualAttendanceChange = (studentId: number, status: 'present' | 'absence') => {
+    setManualAttendance(prev => ({
+      ...prev,
+      [studentId]: status
+    }));
+    setSaveStatus(prev => ({ ...prev, [studentId]: 'idle' }));
+  };
+
+  const handleNotesChange = (studentId: number, value: string) => {
+    setNotes(prev => ({
+      ...prev,
+      [studentId]: value
+    }));
+    setSaveStatus(prev => ({ ...prev, [studentId]: 'idle' }));
+  };
+
+  const saveAttendance = async (studentId: number) => {
+    try {
+      setSaveStatus(prev => ({ ...prev, [studentId]: 'saving' }));
+      
+      const attendanceData = attendanceMode === 'ai' ? aiAttendance : manualAttendance;
+      
+      const data = {
+        student_id: studentId,
+        attendance_date: attendanceDate,
+        status: attendanceData[studentId],
+        notes: notes[studentId] || '',
+        class_value: selectedClass,
+        section: selectedSection
+      };
+
+      await attendanceApi.submitAttendance(data);
+      setSaveStatus(prev => ({ ...prev, [studentId]: 'saved' }));
+    } catch (error) {
+      console.error('Error saving attendance:', error);
+      setSaveStatus(prev => ({ ...prev, [studentId]: 'error' }));
+    }
+  };
+
+  const getEmotionIcon = (emotion?: string) => {
+    switch (emotion) {
+      case 'happy': return <Smile className="w-4 h-4 text-green-600" />;
+      case 'sad': return <Frown className="w-4 h-4 text-red-600" />;
+      default: return <Meh className="w-4 h-4 text-gray-600" />;
+    }
+  };
+
+  const renderAIAttendanceView = () => (
+    <div className="space-y-6">
+      {/* AI Controls Header */}
+      <div className="bg-gradient-to-r from-purple-500 to-indigo-600 rounded-2xl p-6 text-white">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <div className="p-3 bg-white/20 rounded-xl">
+              <Brain className="w-6 h-6" />
+            </div>
+            <div>
+              <h2 className="text-xl font-bold">AI-Powered Attendance</h2>
+              <p className="text-purple-100">Face recognition with smart learning</p>
+            </div>
+          </div>
+          
+          <div className="flex items-center gap-3">
+            {!faceServiceInitialized && (
+              <div className="flex items-center gap-2 px-3 py-2 bg-yellow-100 text-yellow-800 rounded-lg text-sm">
+                <RefreshCw className="w-4 h-4 animate-spin" />
+                <span>Loading Face Recognition...</span>
+              </div>
+            )}
+            {!isAIActive ? (
+              <button
+                onClick={startAIAttendance}
+                disabled={isLoading || !faceServiceInitialized}
+                className="flex items-center gap-2 px-6 py-3 bg-white text-purple-600 rounded-xl font-semibold hover:bg-purple-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Play className="w-5 h-5" />
+                {!faceServiceInitialized ? 'Please Wait...' : 'Start AI Attendance'}
+              </button>
+            ) : (
+              <button
+                onClick={stopAIAttendance}
+                className="flex items-center gap-2 px-6 py-3 bg-red-500 text-white rounded-xl font-semibold hover:bg-red-600 transition-all"
+              >
+                <Pause className="w-5 h-5" />
+                Stop Session
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Session Stats */}
+        {isAIActive && (
+          <div className="grid grid-cols-4 gap-4">
+            <div className="bg-white/10 rounded-xl p-3 text-center">
+              <div className="text-2xl font-bold">{sessionStats.detectedCount}</div>
+              <div className="text-sm text-purple-100">Detected</div>
+            </div>
+            <div className="bg-white/10 rounded-xl p-3 text-center">
+              <div className="text-2xl font-bold">{sessionStats.confirmedCount}</div>
+              <div className="text-sm text-purple-100">Confirmed</div>
+            </div>
+            <div className="bg-white/10 rounded-xl p-3 text-center">
+              <div className="text-2xl font-bold">{sessionStats.unknownCount}</div>
+              <div className="text-sm text-purple-100">Unknown</div>
+            </div>
+            <div className="bg-white/10 rounded-xl p-3 text-center">
+              <div className="text-2xl font-bold">{Math.floor(sessionStats.sessionDuration / 60)}</div>
+              <div className="text-sm text-purple-100">Minutes</div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* AI Detection Interface */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Camera Feed */}
+        <div className="lg:col-span-2">
+          <div className="bg-white rounded-2xl border border-neutral-200 overflow-hidden shadow-lg">
+            <div className="p-4 border-b border-neutral-200 bg-gradient-to-r from-blue-50 to-indigo-50">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Camera className="w-5 h-5 text-blue-600" />
+                  <span className="font-semibold text-blue-900">Live Camera Feed</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className={`w-2 h-2 rounded-full ${
+                    isVideoPlaying ? 'bg-red-500 animate-pulse' : 
+                    mediaStream ? 'bg-yellow-500' : 'bg-gray-400'
+                  }`}></div>
+                  <span className={`text-sm font-medium ${
+                    isVideoPlaying ? 'text-red-600' : 
+                    mediaStream ? 'text-yellow-600' : 'text-gray-600'
+                  }`}>
+                    {isVideoPlaying ? 'LIVE' : mediaStream ? 'READY' : 'OFFLINE'}
+                  </span>
+                </div>
+              </div>
+            </div>
+            
+            {/* Error Display */}
+            {(cameraError || faceServiceError) && (
+              <div className="p-4 bg-red-50 border-b border-red-200">
+                {cameraError && (
+                  <div className="flex items-center gap-2 text-red-700 mb-2">
+                    <X className="w-4 h-4" />
+                    <span className="text-sm font-medium">Camera Error:</span>
+                  </div>
+                )}
+                {cameraError && <p className="text-sm text-red-600 mb-2">{cameraError}</p>}
+                
+                {faceServiceError && (
+                  <div className="flex items-center gap-2 text-red-700 mb-2">
+                    <X className="w-4 h-4" />
+                    <span className="text-sm font-medium">Face Recognition Error:</span>
+                  </div>
+                )}
+                {faceServiceError && <p className="text-sm text-red-600">{faceServiceError}</p>}
+              </div>
+            )}
+            
+            <div className="relative bg-gray-900 aspect-video overflow-hidden">
+              {/* Video Element */}
+              <video
+                ref={videoRef}
+                autoPlay
+                muted
+                playsInline
+                className="w-full h-full object-cover"
+                style={{ 
+                  transform: 'scaleX(-1)', // Mirror effect
+                  backgroundColor: '#000' // Ensure black background
+                }}
+                onLoadStart={() => console.log('📹 Video load started')}
+                onLoadedData={() => console.log('📊 Video data loaded')}
+                onCanPlay={() => console.log('▶️ Video can play')}
+              />
+              
+              {/* Overlay when no stream */}
+              {!mediaStream && (
+                <div className="absolute inset-0 flex items-center justify-center text-white bg-gray-800">
+                  <div className="text-center">
+                    <Camera className="w-16 h-16 mx-auto mb-4 opacity-50" />
+                    <p className="text-lg font-medium mb-2">Camera Ready</p>
+                    <p className="text-sm opacity-70">Click "Start AI Attendance" to begin</p>
+                  </div>
+                </div>
+              )}
+              
+              {/* Manual play button */}
+              {mediaStream && !isVideoPlaying && (
+                <div className="absolute inset-0 flex items-center justify-center bg-black/50 z-30">
+                  <button
+                    onClick={handleManualPlay}
+                    className="flex items-center gap-2 bg-white/90 hover:bg-white text-gray-900 px-6 py-3 rounded-full font-medium transition-all transform hover:scale-105 shadow-lg"
+                  >
+                    <Play className="w-5 h-5" />
+                    Click to Start Video
+                  </button>
+                </div>
+              )}
+              
+              {/* Stream status indicator */}
+              {mediaStream && (
+                <div className="absolute top-4 left-4 z-20">
+                  <div className="flex items-center gap-2 bg-green-500/90 text-white px-3 py-1 rounded-full text-sm">
+                    <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
+                    <span>CONNECTED</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Cool Face Recognition Animation */}
+              {isVideoPlaying && isAIActive && (
+                <div className="absolute inset-0 pointer-events-none z-10">
+                  {/* Scanning lines animation */}
+                  <div className="absolute inset-0">
+                    {/* Horizontal scanning line */}
+                    <div 
+                      className="absolute left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-cyan-400 to-transparent opacity-80"
+                      style={{
+                        animation: 'scanVertical 3s ease-in-out infinite',
+                        top: '0%'
+                      }}
+                    />
+                    
+                    {/* Vertical scanning line */}
+                    <div 
+                      className="absolute top-0 bottom-0 w-0.5 bg-gradient-to-b from-transparent via-cyan-400 to-transparent opacity-80"
+                      style={{
+                        animation: 'scanHorizontal 4s ease-in-out infinite',
+                        left: '0%'
+                      }}
+                    />
+                  </div>
+
+                  {/* Corner brackets */}
+                  <div className="absolute top-8 left-8 w-8 h-8 border-l-2 border-t-2 border-cyan-400 opacity-80"></div>
+                  <div className="absolute top-8 right-8 w-8 h-8 border-r-2 border-t-2 border-cyan-400 opacity-80"></div>
+                  <div className="absolute bottom-8 left-8 w-8 h-8 border-l-2 border-b-2 border-cyan-400 opacity-80"></div>
+                  <div className="absolute bottom-8 right-8 w-8 h-8 border-r-2 border-b-2 border-cyan-400 opacity-80"></div>
+
+                  {/* Center recognition indicator */}
+                  <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+                    <div className="flex items-center gap-3 bg-black/70 backdrop-blur-sm px-4 py-2 rounded-full">
+                      <div className="relative">
+                        <div className="w-6 h-6 border-2 border-cyan-400 rounded-full animate-spin border-t-transparent"></div>
+                        <div className="absolute inset-1 w-4 h-4 bg-cyan-400/20 rounded-full animate-pulse"></div>
+                      </div>
+                      <span className="text-cyan-400 font-medium text-sm animate-pulse">
+                        Recognizing faces...
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Pulsing overlay effect */}
+                  <div 
+                    className="absolute inset-0 bg-gradient-to-r from-cyan-500/5 via-transparent to-purple-500/5"
+                    style={{
+                      animation: 'pulseOverlay 2s ease-in-out infinite alternate'
+                    }}
+                  />
+                </div>
+              )}
+              
+              {/* Face Detection Overlays */}
+              {faceDetections.map((detection) => (
+                <div
+                  key={detection.id}
+                  className="absolute border-2 border-green-400 bg-green-400/20 rounded-lg animate-pulse z-15"
+                  style={{
+                    left: `${(detection.x / 640) * 100}%`,
+                    top: `${(detection.y / 480) * 100}%`,
+                    width: `${(detection.width / 640) * 100}%`,
+                    height: `${(detection.height / 480) * 100}%`
+                  }}
+                >
+                  <div className="absolute -top-12 left-0 bg-green-400 text-black px-2 py-1 rounded-lg text-sm font-semibold flex items-center gap-1 whitespace-nowrap">
+                    <span>{detection.studentName}</span>
+                    <span className="text-xs">({detection.confidence}%)</span>
+                    {getEmotionIcon(detection.emotion)}
+                  </div>
+                  
+                  {!aiSettings.enableAutoConfirm && (
+                    <div className="absolute -bottom-12 left-0 flex gap-1">
+                      <button
+                        onClick={() => confirmDetection(detection)}
+                        className="bg-green-500 text-white p-1 rounded text-xs hover:bg-green-600"
+                      >
+                        <Check className="w-3 h-3" />
+                      </button>
+                      <button
+                        onClick={() => setFaceDetections(prev => prev.filter(d => d.id !== detection.id))}
+                        className="bg-red-500 text-white p-1 rounded text-xs hover:bg-red-600"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Detection Log Sidebar */}
+        <div className="space-y-4">
+          {/* Settings Panel */}
+          <div className="bg-white rounded-xl border border-neutral-200 p-4">
+            <div className="flex items-center gap-2 mb-4">
+              <Settings className="w-4 h-4 text-gray-600" />
+              <span className="font-semibold text-gray-900">AI Settings</span>
+            </div>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Confidence Threshold: {aiSettings.confidenceThreshold}%
+                </label>
+                <input
+                  type="range"
+                  min="50"
+                  max="95"
+                  value={aiSettings.confidenceThreshold}
+                  onChange={(e) => setAiSettings(prev => ({ ...prev, confidenceThreshold: parseInt(e.target.value) }))}
+                  className="w-full"
+                />
+              </div>
+              
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-700">Auto-confirm</span>
+                <button
+                  onClick={() => setAiSettings(prev => ({ ...prev, enableAutoConfirm: !prev.enableAutoConfirm }))}
+                  className={`w-10 h-6 rounded-full transition-colors ${
+                    aiSettings.enableAutoConfirm ? 'bg-blue-600' : 'bg-gray-300'
+                  }`}
+                >
+                  <div className={`w-4 h-4 bg-white rounded-full transition-transform ${
+                    aiSettings.enableAutoConfirm ? 'translate-x-5' : 'translate-x-1'
+                  }`} />
+                </button>
+              </div>
+
+              {aiSettings.enableAutoConfirm && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Auto-confirm delay: {aiSettings.autoConfirmDelay}s
+                  </label>
+                  <input
+                    type="range"
+                    min="1"
+                    max="10"
+                    value={aiSettings.autoConfirmDelay}
+                    onChange={(e) => setAiSettings(prev => ({ ...prev, autoConfirmDelay: parseInt(e.target.value) }))}
+                    className="w-full"
+                  />
+                </div>
+              )}
+              
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-700">Emotion Detection</span>
+                <button
+                  onClick={() => setAiSettings(prev => ({ ...prev, enableEmotionDetection: !prev.enableEmotionDetection }))}
+                  className={`w-10 h-6 rounded-full transition-colors ${
+                    aiSettings.enableEmotionDetection ? 'bg-blue-600' : 'bg-gray-300'
+                  }`}
+                >
+                  <div className={`w-4 h-4 bg-white rounded-full transition-transform ${
+                    aiSettings.enableEmotionDetection ? 'translate-x-5' : 'translate-x-1'
+                  }`} />
+                </button>
+              </div>
+              
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-700">Learning Mode</span>
+                <button
+                  onClick={() => setAiSettings(prev => ({ ...prev, enableLearning: !prev.enableLearning }))}
+                  className={`w-10 h-6 rounded-full transition-colors ${
+                    aiSettings.enableLearning ? 'bg-blue-600' : 'bg-gray-300'
+                  }`}
+                >
+                  <div className={`w-4 h-4 bg-white rounded-full transition-transform ${
+                    aiSettings.enableLearning ? 'translate-x-5' : 'translate-x-1'
+                  }`} />
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Detection Log */}
+          <div className="bg-white rounded-xl border border-neutral-200 p-4">
+            <div className="flex items-center gap-2 mb-4">
+              <Activity className="w-4 h-4 text-gray-600" />
+              <span className="font-semibold text-gray-900">Detection Log</span>
+            </div>
+            
+            <div className="space-y-2 max-h-64 overflow-y-auto">
+              {detectionLog.map((log) => (
+                <div key={log.id} className="flex items-center gap-3 p-2 bg-gray-50 rounded-lg">
+                  <div className={`w-2 h-2 rounded-full ${
+                    log.status === 'confirmed' ? 'bg-green-500' :
+                    log.status === 'flagged' ? 'bg-yellow-500' : 'bg-red-500'
+                  }`} />
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium text-sm text-gray-900 truncate">
+                      {log.studentName}
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      {log.timestamp} • {log.confidence}%
+                    </div>
+                  </div>
+                  <div className={`text-xs px-2 py-1 rounded-full ${
+                    log.status === 'confirmed' ? 'bg-green-100 text-green-700' :
+                    log.status === 'flagged' ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'
+                  }`}>
+                    {log.status === 'confirmed' ? 'Present' : 
+                     log.status === 'flagged' ? 'Review' : 'Unknown'}
+                  </div>
+                </div>
+              ))}
+              
+              {detectionLog.length === 0 && (
+                <div className="text-center py-4 text-gray-500 text-sm">
+                  Detection log will appear here
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* AI Attendance Results */}
+      <div className="bg-white rounded-xl border border-neutral-200 overflow-hidden">
+        <div className="p-6 border-b border-neutral-200 bg-gradient-to-r from-green-50 to-emerald-50">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Target className="w-6 h-6 text-green-600" />
+              <div>
+                <h3 className="text-lg font-bold text-green-900">AI Attendance Results</h3>
+                <p className="text-green-700">Review and confirm AI detections</p>
+              </div>
+            </div>
+            <button
+              onClick={() => {
+                // Save all AI attendance
+                Object.keys(aiAttendance).forEach(studentId => {
+                  saveAttendance(parseInt(studentId));
+                });
+              }}
+              className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+            >
+              <Save className="w-4 h-4" />
+              Save All
+            </button>
+          </div>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-6">
+          {students.map((student) => (
+            <div 
+              key={student.student_id}
+              className={`p-4 rounded-xl border-2 transition-all ${
+                aiAttendance[student.student_id] === 'present' 
+                  ? 'border-green-200 bg-green-50' 
+                  : 'border-gray-200 bg-gray-50'
+              }`}
+            >
+              <div className="flex items-center gap-3 mb-3">
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold ${
+                  aiAttendance[student.student_id] === 'present' ? 'bg-green-500' : 'bg-gray-400'
+                }`}>
+                  {student.student_name.charAt(0)}
+                </div>
+                <div className="flex-1">
+                  <div className="font-semibold text-gray-900">{student.student_name}</div>
+                  <div className="text-sm text-gray-500">ID: {student.student_id}</div>
+                </div>
+                <div className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                  aiAttendance[student.student_id] === 'present' 
+                    ? 'bg-green-100 text-green-700' 
+                    : 'bg-gray-100 text-gray-700'
+                }`}>
+                  {aiAttendance[student.student_id] === 'present' ? 'Present' : 'Absent'}
+                </div>
+              </div>
+              
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setAiAttendance(prev => ({ ...prev, [student.student_id]: 'present' }))}
+                  className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors ${
+                    aiAttendance[student.student_id] === 'present'
+                      ? 'bg-green-600 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-green-100'
+                  }`}
+                >
+                  Present
+                </button>
+                <button
+                  onClick={() => setAiAttendance(prev => ({ ...prev, [student.student_id]: 'absence' }))}
+                  className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors ${
+                    aiAttendance[student.student_id] === 'absence'
+                      ? 'bg-red-600 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-red-100'
+                  }`}
+                >
+                  Absent
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderManualAttendanceView = () => (
+    <div className="space-y-6">
+      {/* Enhanced Manual Header */}
+      <div className="bg-gradient-to-r from-blue-500 to-cyan-600 rounded-2xl p-6 text-white">
+        <div className="flex items-center gap-3">
+          <div className="p-3 bg-white/20 rounded-xl">
+            <Users className="w-6 h-6" />
+          </div>
+          <div>
+            <h2 className="text-xl font-bold">Manual Attendance</h2>
+            <p className="text-blue-100">Traditional attendance with smart assistance</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Enhanced Manual Attendance Table */}
+      <div className="bg-white rounded-xl border border-neutral-200 overflow-hidden shadow-lg">
+        <div className="p-6 border-b border-neutral-200 bg-gradient-to-r from-gray-50 to-slate-50">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <CheckCircle className="w-6 h-6 text-blue-600" />
+              <div>
+                <h3 className="text-lg font-bold text-gray-900">Mark Attendance</h3>
+                <p className="text-gray-600">Class {selectedClass}{selectedSection} • {students.length} students</p>
+              </div>
+            </div>
+            <div className="text-sm text-gray-500">
+              {new Date(attendanceDate).toLocaleDateString()}
+            </div>
+          </div>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                  Student
+                </th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                  Status
+                </th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                  Notes
+                </th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {students.map((student, index) => (
+                <tr key={student.student_id} className={`hover:bg-gray-50 transition-colors ${
+                  index % 2 === 0 ? 'bg-white' : 'bg-gray-50/30'
+                }`}>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full flex items-center justify-center text-white font-bold">
+                        {student.student_name.charAt(0)}
+                      </div>
+                      <div>
+                        <div className="font-semibold text-gray-900">{student.student_name}</div>
+                        <div className="text-sm text-gray-500">ID: {student.student_id}</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex items-center gap-3">
+                      <button
+                        onClick={() => handleManualAttendanceChange(student.student_id, 'present')}
+                        className={`p-3 rounded-xl transition-all ${
+                          manualAttendance[student.student_id] === 'present'
+                            ? 'bg-green-100 text-green-700 shadow-lg scale-110'
+                            : 'bg-gray-100 text-gray-500 hover:bg-green-50 hover:text-green-600'
+                        }`}
+                      >
+                        <CheckCircle className="h-5 w-5" />
+                      </button>
+                      <button
+                        onClick={() => handleManualAttendanceChange(student.student_id, 'absence')}
+                        className={`p-3 rounded-xl transition-all ${
+                          manualAttendance[student.student_id] === 'absence'
+                            ? 'bg-red-100 text-red-700 shadow-lg scale-110'
+                            : 'bg-gray-100 text-gray-500 hover:bg-red-50 hover:text-red-600'
+                        }`}
+                      >
+                        <XCircle className="h-5 w-5" />
+                      </button>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4">
+                    <input
+                      type="text"
+                      value={notes[student.student_id] || ''}
+                      onChange={(e) => handleNotesChange(student.student_id, e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-300 transition-all"
+                      placeholder="Add notes..."
+                    />
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex items-center gap-2">
+                      {saveStatus[student.student_id] === 'saving' ? (
+                        <button className="px-4 py-2 bg-blue-100 text-blue-800 rounded-lg flex items-center gap-2" disabled>
+                          <RefreshCw className="w-4 h-4 animate-spin" />
+                          Saving...
+                        </button>
+                      ) : saveStatus[student.student_id] === 'saved' ? (
+                        <span className="px-4 py-2 bg-green-100 text-green-800 rounded-lg flex items-center gap-2">
+                          <CheckCircle className="h-4 w-4" />
+                          Saved
+                        </span>
+                      ) : saveStatus[student.student_id] === 'error' ? (
+                        <span className="px-4 py-2 bg-red-100 text-red-800 rounded-lg flex items-center gap-2">
+                          <XCircle className="h-4 w-4" />
+                          Failed
+                        </span>
+                      ) : (
+                        <button
+                          onClick={() => saveAttendance(student.student_id)}
+                          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 flex items-center gap-2"
+                        >
+                          <Save className="w-4 h-4" />
+                          Save
+                        </button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderInsightsView = () => (
+    <SmartAttendanceInsights 
+      attendanceData={students} 
+      classId={selectedClass} 
+      section={selectedSection} 
+    />
+  );
+
+  if (isLoading) {
+    return (
+      <div className="min-h-[400px] flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-500">Loading attendance system...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6 animate-fade-in">
+      {/* Enhanced Header */}
+      <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-6">
+        <div className="space-y-2">
+          <h1 className="text-3xl font-bold text-neutral-900 tracking-tight">
+            Attendance Management
+          </h1>
+          <p className="text-neutral-600 text-lg">
+            Advanced attendance system for Class {selectedClass}{selectedSection} • {students.length} students
+          </p>
+        </div>
+        
+        {/* Class Selection */}
+        <div className="flex gap-4">
+          <div className="bg-white border border-neutral-200 rounded-xl p-4 min-w-0">
+            <label className="block text-sm font-semibold text-neutral-700 mb-2">Class</label>
+            <select
+              value={selectedClass}
+              onChange={(e) => setSelectedClass(e.target.value)}
+              className="bg-transparent border-0 focus:ring-0 font-bold text-neutral-900 cursor-pointer text-lg appearance-none pr-8"
+            >
+              {classes.map((cls) => (
+                <option key={cls} value={cls}>Class {cls}th</option>
+              ))}
+            </select>
+          </div>
+          
+          <div className="bg-white border border-neutral-200 rounded-xl p-4 min-w-0">
+            <label className="block text-sm font-semibold text-neutral-700 mb-2">Section</label>
+            <select
+              value={selectedSection}
+              onChange={(e) => setSelectedSection(e.target.value)}
+              className="bg-transparent border-0 focus:ring-0 font-bold text-neutral-900 cursor-pointer text-lg appearance-none pr-8"
+            >
+              {sections.map((section) => (
+                <option key={section} value={section}>Section {section}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+      </div>
+
+      {/* Mode Selection */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {attendanceModes.map((mode) => (
+          <button
+            key={mode.id}
+            onClick={() => setAttendanceMode(mode.id)}
+            className={`p-6 rounded-2xl border-2 transition-all duration-300 text-left ${
+              attendanceMode === mode.id
+                ? mode.id === 'ai' 
+                  ? 'border-purple-300 bg-gradient-to-br from-purple-50 to-indigo-50 shadow-lg scale-105'
+                  : mode.id === 'manual'
+                  ? 'border-blue-300 bg-gradient-to-br from-blue-50 to-cyan-50 shadow-lg scale-105'
+                  : 'border-green-300 bg-gradient-to-br from-green-50 to-emerald-50 shadow-lg scale-105'
+                : 'border-neutral-200 bg-white hover:border-neutral-300 hover:shadow-md'
+            }`}
+          >
+            <div className="flex items-center gap-4 mb-3">
+              <div className={`p-3 rounded-xl ${
+                attendanceMode === mode.id
+                  ? mode.id === 'ai'
+                    ? 'bg-gradient-to-br from-purple-500 to-indigo-600 text-white'
+                    : mode.id === 'manual'
+                    ? 'bg-gradient-to-br from-blue-500 to-cyan-600 text-white'
+                    : 'bg-gradient-to-br from-green-500 to-emerald-600 text-white'
+                  : 'bg-gray-100 text-gray-600'
+              }`}>
+                <mode.icon className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-neutral-900">{mode.title}</h3>
+                <p className="text-neutral-600">{mode.description}</p>
+              </div>
+            </div>
+            
+            {mode.id === 'ai' && (
+              <div className="flex items-center gap-2 text-sm">
+                <Sparkles className="w-4 h-4 text-purple-500" />
+                <span className="text-purple-700 font-medium">Face Recognition • Real-time Detection</span>
+              </div>
+            )}
+            
+            {mode.id === 'manual' && (
+              <div className="flex items-center gap-2 text-sm">
+                <Eye className="w-4 h-4 text-blue-500" />
+                <span className="text-blue-700 font-medium">Quick Mark • Smart Assistance</span>
+              </div>
+            )}
+
+            {mode.id === 'insights' && (
+              <div className="flex items-center gap-2 text-sm">
+                <Target className="w-4 h-4 text-green-500" />
+                <span className="text-green-700 font-medium">Pattern Analysis • Predictions</span>
+              </div>
+            )}
+          </button>
+        ))}
+      </div>
+
+      {/* Date Selection */}
+      <div className="bg-white rounded-xl border border-neutral-200 p-6">
+        <div className="flex items-center gap-4">
+          <Clock className="w-5 h-5 text-gray-500" />
+          <label className="block text-sm font-semibold text-gray-700">
+            Attendance Date
+          </label>
+          <input
+            type="date"
+            value={attendanceDate}
+            onChange={(e) => setAttendanceDate(e.target.value)}
+            className="px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-300 transition-all"
+          />
+        </div>
+      </div>
+
+      {/* Render Selected Mode */}
+      {attendanceMode === 'ai' ? renderAIAttendanceView() : 
+       attendanceMode === 'manual' ? renderManualAttendanceView() :
+       renderInsightsView()}
+    </div>
+  );
+};
+
+export default EnhancedAttendanceSystem;
