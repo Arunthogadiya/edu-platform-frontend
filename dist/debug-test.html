@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Face Recognition Debug Test</title>
+</head>
+<body>
+    <h1>Face Recognition Debug Test</h1>
+    
+    <h2>1. Model Loading Test</h2>
+    <button onclick="testModels()">Test Model Loading</button>
+    <div id="modelStatus"></div>
+    
+    <h2>2. Webcam Test</h2>
+    <button onclick="testWebcam()">Test Webcam</button>
+    <br><br>
+    <video id="testVideo" autoplay muted playsInline style="width: 400px; height: 300px; border: 1px solid #ccc;"></video>
+    <div id="webcamStatus"></div>
+
+    <script src="https://unpkg.com/face-api.js"></script>
+    <script>
+        async function testModels() {
+            const status = document.getElementById('modelStatus');
+            status.innerHTML = 'Loading models...';
+            
+            try {
+                console.log('Testing model loading from /models');
+                
+                // Test direct URL access first
+                const testUrl = '/models/ssd_mobilenetv1_model-weights_manifest.json';
+                console.log('Testing URL:', testUrl);
+                
+                const response = await fetch(testUrl);
+                console.log('Direct fetch response:', response.status, response.statusText);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                // Try loading actual models
+                await Promise.all([
+                    faceapi.nets.ssdMobilenetv1.loadFromUri('/models'),
+                    faceapi.nets.faceLandmark68Net.loadFromUri('/models'),
+                    faceapi.nets.faceRecognitionNet.loadFromUri('/models')
+                ]);
+                
+                status.innerHTML = '✅ Models loaded successfully!';
+                status.style.color = 'green';
+            } catch (error) {
+                console.error('Model loading error:', error);
+                status.innerHTML = `❌ Error: ${error.message}`;
+                status.style.color = 'red';
+            }
+        }
+        
+        async function testWebcam() {
+            const video = document.getElementById('testVideo');
+            const status = document.getElementById('webcamStatus');
+            status.innerHTML = 'Requesting camera access...';
+            
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: { width: 640, height: 480 }
+                });
+                
+                console.log('Stream obtained:', stream);
+                console.log('Video tracks:', stream.getVideoTracks());
+                
+                video.srcObject = stream;
+                
+                video.onloadedmetadata = () => {
+                    console.log('Video metadata loaded');
+                    status.innerHTML = '✅ Webcam working! Video dimensions: ' + video.videoWidth + 'x' + video.videoHeight;
+                    status.style.color = 'green';
+                };
+                
+                video.onerror = (e) => {
+                    console.error('Video error:', e);
+                    status.innerHTML = `❌ Video error: ${e.message}`;
+                    status.style.color = 'red';
+                };
+                
+            } catch (error) {
+                console.error('Webcam error:', error);
+                status.innerHTML = `❌ Webcam error: ${error.message}`;
+                status.style.color = 'red';
+            }
+        }
+    </script>
+</body>
+</html>
