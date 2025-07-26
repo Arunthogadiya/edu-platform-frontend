@@ -181,6 +181,9 @@
   box-shadow: var(--shadow-large);
   position: relative;
   z-index: 10;
+  transition: width 0.5s ease-in-out;
+  overflow: hidden;
+  min-width: 64px; /* Minimum width when collapsed */
 }
 
 .teacher-sidebar::before {
@@ -198,6 +201,69 @@
 .teacher-sidebar > * {
   position: relative;
   z-index: 1;
+}
+
+/* Fix for collapsed sidebar content */
+.teacher-sidebar.collapsed {
+  width: 64px !important;
+}
+
+.teacher-sidebar.collapsed .sidebar-content {
+  white-space: nowrap;
+  overflow: visible;
+}
+
+.teacher-sidebar.collapsed .nav-text {
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
+.teacher-sidebar:not(.collapsed) .nav-text {
+  opacity: 1;
+  visibility: visible;
+  transition: opacity 0.3s ease 0.2s, visibility 0.3s ease 0.2s;
+}
+
+/* Enhanced tooltip positioning for collapsed state */
+.teacher-sidebar.collapsed .teacher-nav-item {
+  justify-content: center;
+  position: relative;
+}
+
+.teacher-sidebar.collapsed .tooltip {
+  position: absolute;
+  left: calc(100% + 12px);
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 1000;
+  min-width: 200px;
+}
+
+/* Fix for header content in collapsed state */
+.teacher-sidebar.collapsed .sidebar-header .header-content {
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
+.teacher-sidebar:not(.collapsed) .sidebar-header .header-content {
+  opacity: 1;
+  visibility: visible;
+  transition: opacity 0.3s ease 0.2s, visibility 0.3s ease 0.2s;
+}
+
+/* Fix for footer content in collapsed state */
+.teacher-sidebar.collapsed .sidebar-footer .footer-content {
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
+.teacher-sidebar:not(.collapsed) .sidebar-footer .footer-content {
+  opacity: 1;
+  visibility: visible;
+  transition: opacity 0.3s ease 0.2s, visibility 0.3s ease 0.2s;
 }
 
 .teacher-card {
@@ -238,7 +304,10 @@
   border-radius: var(--radius-sm);
   margin: 4px 0;
   position: relative;
-  overflow: hidden;
+  overflow: visible; /* Changed from hidden to visible for tooltips */
+  display: flex;
+  align-items: center;
+  min-height: 48px; /* Ensure consistent height */
 }
 
 .teacher-nav-item::before {
@@ -251,6 +320,7 @@
   background: rgba(255, 255, 255, 0.1);
   transform: translateX(-100%);
   transition: transform var(--animation-speed-normal) var(--animation-ease);
+  z-index: -1;
 }
 
 .teacher-nav-item:hover::before {
@@ -260,6 +330,11 @@
 .teacher-nav-item:hover {
   background: rgba(255, 255, 255, 0.1);
   transform: translateX(4px);
+}
+
+/* Fix for collapsed state hover */
+.teacher-sidebar.collapsed .teacher-nav-item:hover {
+  transform: translateX(0) scale(1.05);
 }
 
 .teacher-nav-item.active {
@@ -278,6 +353,36 @@
   height: 24px;
   background: var(--coral-gradient);
   border-radius: 2px 0 0 2px;
+}
+
+/* Hide active indicator in collapsed state */
+.teacher-sidebar.collapsed .teacher-nav-item.active::after {
+  display: none;
+}
+
+/* Icon styling for both collapsed and expanded states */
+.teacher-nav-item .nav-icon {
+  flex-shrink: 0;
+  transition: all var(--animation-speed-normal) var(--animation-ease);
+  margin-right: 12px;
+}
+
+.teacher-sidebar.collapsed .teacher-nav-item .nav-icon {
+  margin-right: 0;
+}
+
+/* Text content styling */
+.teacher-nav-item .nav-content {
+  flex: 1;
+  min-width: 0; /* Allow text to truncate */
+  transition: all var(--animation-speed-normal) var(--animation-ease);
+}
+
+.teacher-sidebar.collapsed .teacher-nav-item .nav-content {
+  opacity: 0;
+  visibility: hidden;
+  width: 0;
+  overflow: hidden;
 }
 
 .teacher-header {
@@ -354,7 +459,99 @@
   border-color: rgba(255, 255, 255, 0.3);
 }
 
-/* Enhanced Button Styles */
+/* Responsive sidebar fixes */
+@media (max-width: 768px) {
+  .teacher-sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    z-index: 50;
+    transform: translateX(-100%);
+    transition: transform 0.3s ease-in-out;
+  }
+  
+  .teacher-sidebar.mobile-open {
+    transform: translateX(0);
+  }
+  
+  .teacher-sidebar.collapsed {
+    width: 64px;
+    transform: translateX(-100%);
+  }
+  
+  .teacher-sidebar.collapsed.mobile-open {
+    transform: translateX(0);
+  }
+}
+
+/* Smooth width transition for desktop */
+@media (min-width: 769px) {
+  .teacher-sidebar {
+    position: relative;
+    transform: none !important;
+  }
+}
+
+/* Fix for section titles in collapsed state */
+.teacher-sidebar.collapsed .section-title {
+  display: none;
+}
+
+/* Ensure tooltips are above other elements */
+.teacher-sidebar .tooltip {
+  z-index: 9999;
+}
+
+/* Prevent text selection on navigation items */
+.teacher-nav-item {
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+}
+
+/* Fix for toggle button positioning */
+.teacher-sidebar .sidebar-header {
+  min-height: 80px;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.teacher-sidebar.collapsed .sidebar-header {
+  justify-content: center;
+  padding: 1rem;
+}
+
+/* Ensure proper spacing for navigation sections */
+.teacher-sidebar .sidebar-content {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
+}
+
+.teacher-sidebar .sidebar-content::-webkit-scrollbar {
+  width: 4px;
+}
+
+.teacher-sidebar .sidebar-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.teacher-sidebar .sidebar-content::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 2px;
+}
+
+.teacher-sidebar .sidebar-content::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.5);
+}
+
+/* Fix for overlay backdrop blur */
+.teacher-sidebar::before {
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
 .btn-primary {
   background: var(--primary-gradient);
   color: white;
@@ -394,6 +591,62 @@
 
 .btn-primary:active {
   transform: translateY(0) scale(0.98);
+}
+
+/* Additional fixes for collapsed sidebar state */
+.teacher-sidebar.collapsed .teacher-nav-item.active {
+  border-left: none;
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.teacher-sidebar.collapsed .teacher-nav-item.active::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 0;
+  transform: translateX(-50%);
+  width: 3px;
+  height: 100%;
+  background: var(--coral-gradient);
+  border-radius: 0 0 2px 2px;
+}
+
+/* Fix for section spacing in collapsed state */
+.teacher-sidebar.collapsed .sidebar-content > div {
+  padding: 0 8px;
+}
+
+.teacher-sidebar.collapsed .sidebar-content .space-y-8 > * + * {
+  margin-top: 1rem;
+}
+
+/* Improved tooltip positioning and visibility */
+.teacher-sidebar.collapsed .tooltip {
+  transition: opacity 0.2s ease-in-out 0.3s, transform 0.2s ease-in-out 0.3s;
+  transform: translateY(-50%) translateX(0);
+}
+
+.teacher-sidebar.collapsed .teacher-nav-item:hover .tooltip {
+  opacity: 1;
+  transform: translateY(-50%) translateX(8px);
+}
+
+/* Fix for logo scaling in collapsed state */
+.teacher-sidebar.collapsed .sidebar-header .w-10.h-10 {
+  transition: all 0.3s ease;
+}
+
+.teacher-sidebar.collapsed .sidebar-header:hover .w-10.h-10 {
+  transform: scale(1.1);
+}
+
+/* Ensure proper z-index stacking */
+.teacher-sidebar {
+  z-index: 30;
+}
+
+.teacher-sidebar .tooltip {
+  z-index: 1000;
 }
 
 .btn-accent {
@@ -608,6 +861,26 @@ button:focus-visible {
 @keyframes ai-glow {
   0%, 100% { box-shadow: 0 0 20px rgba(45, 74, 138, 0.3); }
   50% { box-shadow: 0 0 30px rgba(45, 74, 138, 0.5), 0 0 40px rgba(45, 74, 138, 0.2); }
+}
+
+/* Face Recognition Scanning Animations */
+@keyframes scanVertical {
+  0% { top: 0%; opacity: 0; }
+  10% { opacity: 1; }
+  90% { opacity: 1; }
+  100% { top: 100%; opacity: 0; }
+}
+
+@keyframes scanHorizontal {
+  0% { left: 0%; opacity: 0; }
+  10% { opacity: 1; }
+  90% { opacity: 1; }
+  100% { left: 100%; opacity: 0; }
+}
+
+@keyframes pulseOverlay {
+  0% { opacity: 0.05; }
+  100% { opacity: 0.15; }
 }
 
 /* AI Command Bar specific styles */

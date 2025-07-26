@@ -1,6 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { learningResourceService } from '../../../../services/learningResourceService';
-import { useTeacher } from '../../../../contexts/TeacherContext';
 import { 
   Book,
   Upload,
@@ -38,7 +37,6 @@ interface ResourceData {
 
 const LearningResources: React.FC = () => {
   const { toast } = useToast();
-  const { selectedClass, selectedSection } = useTeacher();
   const [isRecording, setIsRecording] = useState(false);
   const [audioURL, setAudioURL] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -50,6 +48,8 @@ const LearningResources: React.FC = () => {
     section: ''
   });
   const [resources, setResources] = useState<ResourceData[]>([]);
+  const [selectedClass, setSelectedClass] = useState('');
+  const [selectedSection, setSelectedSection] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [playingResource, setPlayingResource] = useState<number | null>(null);
@@ -57,6 +57,9 @@ const LearningResources: React.FC = () => {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<BlobPart[]>([]);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  const classes = ['6', '7', '8', '9', '10'];
+  const sections = ['A', 'B', 'C'];
 
   useEffect(() => {
     if (selectedClass && selectedSection) {
@@ -311,9 +314,37 @@ const LearningResources: React.FC = () => {
           <p className="text-neutral-600 text-lg">
             Create and manage audio learning materials for your students
           </p>
-          {selectedClass && selectedSection && (
-            <p className="text-gray-600 mt-2">Class {selectedClass} - Section {selectedSection}</p>
-          )}
+        </div>
+        
+        {/* Class Selection */}
+        <div className="flex gap-4">
+          <div className="bg-white border border-neutral-200 rounded-xl p-4 min-w-0">
+            <label className="block text-sm font-semibold text-neutral-700 mb-2">Class</label>
+            <select
+              value={selectedClass}
+              onChange={(e) => setSelectedClass(e.target.value)}
+              className="bg-transparent border-0 focus:ring-0 font-bold text-neutral-900 cursor-pointer text-lg appearance-none pr-8"
+            >
+              <option value="">Select Class</option>
+              {classes.map((cls) => (
+                <option key={cls} value={cls}>Class {cls}th</option>
+              ))}
+            </select>
+          </div>
+          
+          <div className="bg-white border border-neutral-200 rounded-xl p-4 min-w-0">
+            <label className="block text-sm font-semibold text-neutral-700 mb-2">Section</label>
+            <select
+              value={selectedSection}
+              onChange={(e) => setSelectedSection(e.target.value)}
+              className="bg-transparent border-0 focus:ring-0 font-bold text-neutral-900 cursor-pointer text-lg appearance-none pr-8"
+            >
+              <option value="">Select Section</option>
+              {sections.map((section) => (
+                <option key={section} value={section}>Section {section}</option>
+              ))}
+            </select>
+          </div>
         </div>
       </div>
 

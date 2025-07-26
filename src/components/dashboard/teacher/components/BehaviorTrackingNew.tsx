@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { behaviorService } from '../../../../services/behaviorService';
-import { useTeacher } from '../../../../contexts/TeacherContext';
 import { 
   Brain, 
   Users, 
@@ -77,9 +76,10 @@ const Modal: React.FC<{
 
 const BehaviorTracking: React.FC = () => {
   const { toast } = useToast();
-  const { selectedClass: currentClass, selectedSection: currentSection } = useTeacher();
   const [students, setStudents] = useState<Student[]>([]);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  const [currentClass, setCurrentClass] = useState('');
+  const [currentSection, setCurrentSection] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -87,6 +87,9 @@ const BehaviorTracking: React.FC = () => {
     student_id: '',
     observation_text: ''
   });
+
+  const classes = ['6', '7', '8', '9', '10'];
+  const sections = ['A', 'B', 'C'];
 
   useEffect(() => {
     if (currentClass && currentSection) {
@@ -112,14 +115,7 @@ const BehaviorTracking: React.FC = () => {
 
     setIsLoading(true);
     try {
-      // Add timeout handling to prevent hanging requests
-      const response = await Promise.race([
-        behaviorService.getClassAnalysis(currentClass, currentSection),
-        new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Request timeout')), 8000)
-        )
-      ]);
-      
+      const response = await behaviorService.getClassAnalysis(currentClass, currentSection);
       if (response && (response as any).students) {
         setStudents((response as any).students);
       }
@@ -127,9 +123,7 @@ const BehaviorTracking: React.FC = () => {
       console.error('Error loading students:', error);
       toast({
         title: "Error",
-        description: error instanceof Error && error.message === 'Request timeout' 
-          ? "Request timed out. Please try again." 
-          : "Failed to load students",
+        description: "Failed to load students",
         variant: "destructive",
       });
     } finally {
@@ -326,9 +320,37 @@ const BehaviorTracking: React.FC = () => {
           <p className="text-neutral-600 text-lg">
             Monitor and analyze student behavior patterns with intelligent insights
           </p>
-          {currentClass && currentSection && (
-            <p className="text-gray-600 mt-2">Class {currentClass} - Section {currentSection}</p>
-          )}
+        </div>
+        
+        {/* Class Selection */}
+        <div className="flex gap-4">
+          <div className="bg-white border border-neutral-200 rounded-xl p-4 min-w-0">
+            <label className="block text-sm font-semibold text-neutral-700 mb-2">Class</label>
+            <select
+              value={currentClass}
+              onChange={(e) => setCurrentClass(e.target.value)}
+              className="bg-transparent border-0 focus:ring-0 font-bold text-neutral-900 cursor-pointer text-lg appearance-none pr-8"
+            >
+              <option value="">Select Class</option>
+              {classes.map((cls) => (
+                <option key={cls} value={cls}>Class {cls}th</option>
+              ))}
+            </select>
+          </div>
+          
+          <div className="bg-white border border-neutral-200 rounded-xl p-4 min-w-0">
+            <label className="block text-sm font-semibold text-neutral-700 mb-2">Section</label>
+            <select
+              value={currentSection}
+              onChange={(e) => setCurrentSection(e.target.value)}
+              className="bg-transparent border-0 focus:ring-0 font-bold text-neutral-900 cursor-pointer text-lg appearance-none pr-8"
+            >
+              <option value="">Select Section</option>
+              {sections.map((section) => (
+                <option key={section} value={section}>Section {section}</option>
+              ))}
+            </select>
+          </div>
         </div>
       </div>
 

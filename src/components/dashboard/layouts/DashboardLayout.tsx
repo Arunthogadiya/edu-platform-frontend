@@ -104,16 +104,34 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, userType })
       <DashboardErrorBoundary>
         <div className="teacher-dashboard h-screen w-screen overflow-hidden flex">
           {/* Modern Sidebar */}
-          <Sidebar 
-            isCollapsed={isCollapsed} 
-            onToggleCollapse={handleToggleCollapse}
-            userType={userType}
-          />
+          <div className={`${isMobile && !isSidebarOpen ? 'hidden' : ''}`}>
+            <Sidebar 
+              isCollapsed={isMobile ? false : isCollapsed} 
+              onToggleCollapse={handleToggleCollapse}
+              userType={userType}
+              isMobile={isMobile}
+              isMobileOpen={isSidebarOpen}
+            />
+          </div>
 
           {/* Main Content Area */}
           <div className="flex-1 flex flex-col overflow-hidden">
             {/* Enhanced Modern Header */}
             <header className="teacher-header h-20 flex items-center justify-between px-8 relative z-10">
+              {/* Mobile Menu Button */}
+              {isMobile && (
+                <button
+                  onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+                  className="p-2 rounded-xl bg-white/60 hover:bg-white/90 transition-all duration-300 lg:hidden"
+                >
+                  {isSidebarOpen ? (
+                    <X className="w-5 h-5 text-neutral-600" />
+                  ) : (
+                    <Menu className="w-5 h-5 text-neutral-600" />
+                  )}
+                </button>
+              )}
+
               {/* Left Section - Enhanced Breadcrumbs */}
               <div className="flex items-center space-x-6">
                 <nav className="flex items-center space-x-3 text-sm">

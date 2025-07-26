@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { dashboardService } from '@services/dashboardService';
+import { dashboardService } from '../../../../services/dashboardService';
+import { useTeacher } from '../../../../contexts/TeacherContext';
 
 interface Student {
   student_id: number;
@@ -22,21 +23,18 @@ interface Grade {
 
 const Assessments: React.FC = () => {
   const { t } = useTranslation();
+  const { selectedClass, selectedSection } = useTeacher();
   const [selectedType, setSelectedType] = useState<'progress' | 'report'>('progress');
-  const [selectedStudent, setSelectedStudent] = useState<string | null>(null);
+  const [selectedStudent, setSelectedStudent] = useState<number | null>(null);
   const [students, setStudents] = useState<Student[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [filters, setFilters] = useState({
-    class_value: '',
-    section: ''
-  });
 
   useEffect(() => {
-    if (filters.class_value && filters.section) {
+    if (selectedClass && selectedSection) {
       loadStudents();
     }
-  }, [filters.class_value, filters.section]);
+  }, [selectedClass, selectedSection]);
 
   const loadStudents = async () => {
     try {
@@ -44,7 +42,7 @@ const Assessments: React.FC = () => {
       setError(null);
       setSelectedStudent(null); // Reset selected student when filters change
       
-      const response = await dashboardService.fetchStudents(filters.class_value, filters.section);
+      const response = await dashboardService.fetchStudents(selectedClass, selectedSection);
       setStudents(response.students || []);
     } catch (err) {
       console.error('Error loading students:', err);
@@ -108,83 +106,49 @@ const Assessments: React.FC = () => {
   return (
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">{t('teacher.assessments.title')}</h1>
+        <div>
+          <h1 className="text-2xl font-bold">{t('teacher.assessments.title')}</h1>
+          {selectedClass && selectedSection && (
+            <p className="text-gray-600 mt-1">Class {selectedClass} - Section {selectedSection}</p>
+          )}
+        </div>
         <div className="flex items-center gap-4">
-          {/* Class Filter */}
-          <div className="flex gap-4">
+          {/* Student Filter - Only shown when both class and section are selected */}
+          {students.length > 0 && (
             <div>
-              <label htmlFor="class-select" className="block text-sm font-medium text-gray-700 mb-1">
-                Class
+              <label htmlFor="student-select" className="block text-sm font-medium text-gray-700 mb-1">
+                Student
               </label>
               <select
-                id="class-select"
-                value={filters.class_value}
-                onChange={(e) => setFilters(prev => ({ ...prev, class_value: e.target.value, section: '' }))}
-                className="px-4 py-2 border rounded min-w-[120px]"
+                id="student-select"
+                value={selectedStudent || ''}
+                onChange={(e) => setSelectedStudent(e.target.value ? parseInt(e.target.value) : null)}
+                className="px-4 py-2 border rounded min-w-[200px]"
               >
-                <option value="">Select Class</option>
-                {['6', '7', '8', '9', '10'].map(cls => (
-                  <option key={cls} value={cls}>Class {cls}</option>
+                <option value="">All Students</option>
+                {students.map(student => (
+                  <option key={student.student_id} value={student.student_id}>
+                    {student.student_name}
+                  </option>
                 ))}
               </select>
             </div>
-
-            {/* Section Filter */}
-            <div>
-              <label htmlFor="section-select" className="block text-sm font-medium text-gray-700 mb-1">
-                Section
-              </label>
-              <select
-                id="section-select"
-                value={filters.section}
-                onChange={(e) => setFilters(prev => ({ ...prev, section: e.target.value }))}
-                className="px-4 py-2 border rounded min-w-[120px]"
-                disabled={!filters.class_value}
-              >
-                <option value="">Select Section</option>
-                {['A', 'B', 'C', 'D'].map(section => (
-                  <option key={section} value={section}>Section {section}</option>
-                ))}
-              </select>
-            </div>
-
-            {/* Student Filter - Only shown when both class and section are selected */}
-            {students.length > 0 && (
-              <div>
-                <label htmlFor="student-select" className="block text-sm font-medium text-gray-700 mb-1">
-                  Student
-                </label>
-                <select
-                  id="student-select"
-                  value={selectedStudent || ''}
-                  onChange={(e) => setSelectedStudent(e.target.value)}
-                  className="px-4 py-2 border rounded min-w-[200px]"
-                >
-                  <option value="">All Students</option>
-                  {students.map(student => (
-                    <option key={student.student_id} value={student.student_id}>
-                      {student.student_name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-          </div>
+          )}
 
           <button
             className="px-4 py-2 bg-blue-600 text-white rounded mt-6"
             onClick={() => {/* Open new assessment modal */}}
-            disabled={!filters.class_value || !filters.section}
+            disabled={!selectedClass || !selectedSection}
           >
             {t('teacher.assessments.newAssessment')}
           </button>
         </div>
       </div>
 
-      {/* Show message when no filters are selected */}
-      {!filters.class_value || !filters.section ? (
+      {/* Show message when no class/section are selected */}
+      {!selectedClass || !selectedSection ? (
         <div className="text-center p-8 bg-gray-50 rounded-lg">
-          <p className="text-gray-600">Please select both class and section to view student assessments.</p>
+          <p className="text-gray-600">Please select both class and section from the dashboard to view student assessments.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

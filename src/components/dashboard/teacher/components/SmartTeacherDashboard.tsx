@@ -25,8 +25,10 @@ import {
 import { studentApi, Student } from '../../../../services/api/studentApi';
 import { attendanceApi } from '../../../../services/api/attendanceApi';
 import { useAttendance } from '../../../../context/AttendanceContext';
+import { useTeacher } from '../../../../contexts/TeacherContext';
 import AICommandBar from './AICommandBar';
 import AnimatedMetricCard from './AnimatedMetricCard';
+import ClassSelector from './ClassSelector';
 
 interface SmartInsight {
   id: string;
@@ -62,8 +64,7 @@ interface DashboardStats {
 }
 
 const SmartTeacherDashboard: React.FC = () => {
-  const [selectedClass, setSelectedClass] = useState('6');
-  const [selectedSection, setSelectedSection] = useState('A');
+  const { selectedClass, selectedSection } = useTeacher();
   const [stats, setStats] = useState<DashboardStats>({
     totalStudents: 0,
     presentToday: 0,
@@ -80,9 +81,6 @@ const SmartTeacherDashboard: React.FC = () => {
   
   const navigate = useNavigate();
   const { attendanceStats, refreshAttendance } = useAttendance();
-
-  const classes = ['6', '7', '8', '9', '10'];
-  const sections = ['A', 'B', 'C'];
 
   useEffect(() => {
     if (selectedClass && selectedSection) {
@@ -331,33 +329,7 @@ const SmartTeacherDashboard: React.FC = () => {
         </div>
         
         {/* Class Selection */}
-        <div className="flex gap-4">
-          <div className="stats-card p-4 min-w-0">
-            <label className="block text-sm font-semibold text-neutral-700 mb-2">Class</label>
-            <select
-              value={selectedClass}
-              onChange={(e) => setSelectedClass(e.target.value)}
-              className="bg-transparent border-0 focus:ring-0 font-bold text-neutral-900 cursor-pointer text-lg appearance-none pr-8"
-            >
-              {classes.map((cls) => (
-                <option key={cls} value={cls}>Class {cls}th</option>
-              ))}
-            </select>
-          </div>
-          
-          <div className="stats-card p-4 min-w-0">
-            <label className="block text-sm font-semibold text-neutral-700 mb-2">Section</label>
-            <select
-              value={selectedSection}
-              onChange={(e) => setSelectedSection(e.target.value)}
-              className="bg-transparent border-0 focus:ring-0 font-bold text-neutral-900 cursor-pointer text-lg appearance-none pr-8"
-            >
-              {sections.map((section) => (
-                <option key={section} value={section}>Section {section}</option>
-              ))}
-            </select>
-          </div>
-        </div>
+        <ClassSelector />
       </div>
 
       {/* Enhanced Animated Stats Cards */}

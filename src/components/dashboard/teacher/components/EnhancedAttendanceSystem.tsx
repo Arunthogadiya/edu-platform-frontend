@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { studentApi, Student } from '../../../../services/api/studentApi';
 import { attendanceApi } from '../../../../services/api/attendanceApi';
+import { useTeacher } from '../../../../contexts/TeacherContext';
 import SmartAttendanceInsights from './SmartAttendanceInsights';
 import faceRecognitionService from '../../../../services/faceRecognitionService';
 
@@ -42,6 +43,21 @@ const animationStyles = `
   @keyframes pulseOverlay {
     0% { opacity: 0.1; }
     100% { opacity: 0.3; }
+  }
+  
+  @keyframes slideInRight {
+    0% { 
+      transform: translateX(100%); 
+      opacity: 0; 
+    }
+    100% { 
+      transform: translateX(0); 
+      opacity: 1; 
+    }
+  }
+  
+  .animate-slide-in-right {
+    animation: slideInRight 0.3s ease-out;
   }
 `;
 
@@ -87,10 +103,9 @@ interface AIAttendanceSettings {
 
 const EnhancedAttendanceSystem: React.FC = () => {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const { selectedClass, selectedSection, setSelectedClass, setSelectedSection } = useTeacher();
   
   // Core state
-  const [selectedClass, setSelectedClass] = useState('6');
-  const [selectedSection, setSelectedSection] = useState('A');
   const [students, setStudents] = useState<Student[]>([]);
   const [attendanceMode, setAttendanceMode] = useState<'ai' | 'manual' | 'insights'>('ai');
   const [isLoading, setIsLoading] = useState(false);
@@ -117,7 +132,7 @@ const EnhancedAttendanceSystem: React.FC = () => {
     confidence: number;
   }>>([]);
   const [aiSettings, setAiSettings] = useState<AIAttendanceSettings>({
-    confidenceThreshold: 75,
+    confidenceThreshold: 50, // Lowered from 75 to 50 for testing
     autoConfirmDelay: 5,
     enableAutoConfirm: true,
     enableEmotionDetection: true,
@@ -135,6 +150,21 @@ const EnhancedAttendanceSystem: React.FC = () => {
   const [faceServiceInitialized, setFaceServiceInitialized] = useState(false);
   const [faceServiceError, setFaceServiceError] = useState<string | null>(null);
   const [processingInterval, setProcessingInterval] = useState<NodeJS.Timeout | null>(null);
+  
+  // Camera selection state
+  const [availableCameras, setAvailableCameras] = useState<MediaDeviceInfo[]>([]);
+  const [selectedCameraId, setSelectedCameraId] = useState<string>('');
+  const [showCameraSelector, setShowCameraSelector] = useState(false);
+  
+  // Video dimensions for bbox calculation
+  const [videoDimensions, setVideoDimensions] = useState({ width: 1280, height: 720 });
+  
+  // Attendance notifications
+  const [attendanceNotifications, setAttendanceNotifications] = useState<Array<{
+    id: string;
+    studentName: string;
+    timestamp: number;
+  }>>([]);
 
   const classes = ['6', '7', '8', '9', '10'];
   const sections = ['A', 'B', 'C'];
@@ -172,17 +202,73 @@ const EnhancedAttendanceSystem: React.FC = () => {
     }
   }, [attendanceDate, selectedClass, selectedSection]);
 
+  // Load available cameras on component mount
+  useEffect(() => {
+    loadAvailableCameras();
+  }, []);
+
+  // Close camera selector when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (showCameraSelector) {
+        const target = event.target as Element;
+        if (!target.closest('.camera-selector')) {
+          setShowCameraSelector(false);
+        }
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showCameraSelector]);
+
+  const loadAvailableCameras = async () => {
+    try {
+      console.log('🎥 Loading available cameras...');
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const videoDevices = devices.filter(device => device.kind === 'videoinput');
+      
+      console.log('📹 Found cameras:', videoDevices.length);
+      setAvailableCameras(videoDevices);
+      
+      // Set default camera (first one found)
+      if (videoDevices.length > 0 && !selectedCameraId) {
+        setSelectedCameraId(videoDevices[0].deviceId);
+        console.log('📱 Default camera selected:', videoDevices[0].label || 'Camera 1');
+      }
+    } catch (error) {
+      console.error('❌ Failed to enumerate cameras:', error);
+    }
+  };
+
   // Initialize face recognition service
   useEffect(() => {
     const initializeFaceService = async () => {
       try {
         setFaceServiceError(null);
-        console.log('Initializing face recognition service...');
+        console.log('🔄 Initializing face recognition service...');
+        
+        // Add a small delay to ensure DOM is ready
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
         await faceRecognitionService.loadModels();
         setFaceServiceInitialized(true);
-        console.log('Face recognition service initialized successfully');
+        console.log('🎉 Face recognition service initialized successfully');
+        
+        // Log known faces for debugging
+        const knownFaces = faceRecognitionService.getKnownFaceNames();
+        const serviceStatus = faceRecognitionService.getStatus();
+        console.log('👥 Known faces loaded:', knownFaces);
+        console.log('📊 Service status:', serviceStatus);
+        
+        if (knownFaces.length === 0) {
+          console.warn('⚠️ No known faces loaded. Face recognition will only detect faces without identification.');
+        }
+        
       } catch (error) {
-        console.error('Failed to initialize face recognition service:', error);
+        console.error('❌ Failed to initialize face recognition service:', error);
         setFaceServiceError(error instanceof Error ? error.message : 'Failed to initialize face recognition');
         setFaceServiceInitialized(false);
       }
@@ -244,14 +330,16 @@ const EnhancedAttendanceSystem: React.FC = () => {
     try {
       setIsLoading(true);
       const data = await studentApi.getStudents(selectedClass, selectedSection);
+      console.log(`👨‍🎓 Loaded ${data.length} students:`, data.map(s => ({ id: s.student_id, name: s.student_name })));
       setStudents(data);
       
-      // Initialize attendance states
+      // Initialize attendance states - set all to 'absence' initially
       const initialAttendance = data.reduce((acc: { [key: number]: 'present' | 'absence' }, student: Student) => {
-        acc[student.student_id] = 'present';
+        acc[student.student_id] = 'absence'; // Changed from 'present' to 'absence'
         return acc;
       }, {} as { [key: number]: 'present' | 'absence' });
       
+      console.log(`📝 Initial attendance state:`, initialAttendance);
       setManualAttendance(initialAttendance);
       setAiAttendance(initialAttendance);
     } catch (error) {
@@ -313,40 +401,64 @@ const EnhancedAttendanceSystem: React.FC = () => {
         setMediaStream(null);
       }
       
-      // Reset video element completely to avoid cached states
+      // Clean up video element without cloneNode to avoid state loss
       if (videoRef.current) {
         const video = videoRef.current;
         
-        // Remove all existing event listeners to prevent conflicts
-        const newVideo = video.cloneNode(true) as HTMLVideoElement;
-        video.parentNode?.replaceChild(newVideo, video);
+        console.log('🧹 Cleaning up video element...');
         
-        // Update ref to point to new video element
-        (videoRef as any).current = newVideo;
+        // Remove existing event listeners if cleanup function exists
+        if ((video as any).cleanup) {
+          (video as any).cleanup();
+          console.log('✅ Video event listeners cleaned up');
+        }
         
-        console.log('🔄 Video element reset with cloneNode()');
+        // Reset video element properly
+        video.pause();
+        video.srcObject = null;
+        video.load(); // Reset the video element state
+        
+        // Remove any existing src attributes
+        if (video.src) {
+          URL.revokeObjectURL(video.src);
+          video.removeAttribute('src');
+        }
+        
+        console.log('🔄 Video element cleaned up without cloneNode');
       }
       
-      // Request camera permissions with better constraints
+      // Request camera permissions with better constraints and specific camera
       const constraints = {
         video: {
+          deviceId: selectedCameraId ? { exact: selectedCameraId } : undefined,
           width: { ideal: 1280, min: 640, max: 1920 },
           height: { ideal: 720, min: 480, max: 1080 },
           frameRate: { ideal: 30, min: 15, max: 60 },
-          facingMode: 'user'
+          facingMode: selectedCameraId ? undefined : 'user' // Don't specify facingMode if we have a specific device
         },
         audio: false
       };
       
       console.log('📱 Requesting user media with constraints:', constraints);
+      console.log('🎯 Selected camera ID:', selectedCameraId);
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
       
       console.log('✅ Camera stream obtained successfully');
+      const settings = stream.getVideoTracks()[0]?.getSettings();
       console.log('📹 Stream details:', {
         active: stream.active,
         tracks: stream.getVideoTracks().length,
-        trackSettings: stream.getVideoTracks()[0]?.getSettings()
+        trackSettings: settings
       });
+      
+      // Update video dimensions based on actual stream settings
+      if (settings) {
+        setVideoDimensions({
+          width: settings.width || 1280,
+          height: settings.height || 720
+        });
+        console.log('📐 Video dimensions set to:', settings.width, 'x', settings.height);
+      }
       
       // Verify stream tracks are active
       const videoTrack = stream.getVideoTracks()[0];
@@ -473,11 +585,36 @@ const EnhancedAttendanceSystem: React.FC = () => {
           Object.entries(eventHandlers).forEach(([event, handler]) => {
             video.removeEventListener(event, handler);
           });
+          
+          // Also cleanup sync mechanism
+          if ((video as any).syncCleanup) {
+            (video as any).syncCleanup();
+          }
         };
         
         // Set the stream - this should trigger the event cascade
         video.srcObject = stream;
         console.log('📹 Video srcObject set, waiting for events...');
+        
+        // Ensure mediaStream state stays synchronized with video element
+        const syncStreamState = () => {
+          const currentStream = video.srcObject as MediaStream;
+          if (currentStream && currentStream !== mediaStream) {
+            console.log('🔄 Synchronizing mediaStream state with video element');
+            setMediaStream(currentStream);
+          }
+        };
+        
+        // Sync immediately and set up periodic sync
+        syncStreamState();
+        const syncInterval = setInterval(syncStreamState, 1000);
+        
+        // Store sync cleanup
+        (video as any).syncCleanup = () => {
+          if (syncInterval) {
+            clearInterval(syncInterval);
+          }
+        };
         
         // Monitor stream tracks for unexpected endings
         videoTrack.addEventListener('ended', () => {
@@ -540,14 +677,25 @@ const EnhancedAttendanceSystem: React.FC = () => {
       console.log('🔄 Retrying with basic camera constraints...');
       const basicConstraints = {
         video: {
+          deviceId: selectedCameraId ? { exact: selectedCameraId } : undefined,
           width: 640,
           height: 480,
-          facingMode: 'user'
+          facingMode: selectedCameraId ? undefined : 'user'
         },
         audio: false
       };
       
       const stream = await navigator.mediaDevices.getUserMedia(basicConstraints);
+      const settings = stream.getVideoTracks()[0]?.getSettings();
+      
+      // Update video dimensions for basic constraints
+      if (settings) {
+        setVideoDimensions({
+          width: settings.width || 640,
+          height: settings.height || 480
+        });
+      }
+      
       setMediaStream(stream);
       
       if (videoRef.current) {
@@ -562,32 +710,45 @@ const EnhancedAttendanceSystem: React.FC = () => {
   };
 
   const handleManualPlay = async () => {
-    if (!videoRef.current || !mediaStream) {
-      console.error('❌ Video or stream not available for manual play');
+    const video = videoRef.current;
+    const currentStream = video?.srcObject as MediaStream;
+    const activeStream = mediaStream || currentStream;
+
+    if (!video || !activeStream) {
+      console.error('❌ Video or stream not available for manual play:', {
+        video: !!video,
+        mediaStream: !!mediaStream,
+        currentStream: !!currentStream,
+        videoSrcObject: !!video?.srcObject
+      });
       setCameraError('Video or camera stream not available');
       return;
     }
 
-    try {
-      const video = videoRef.current;
-      
+    try {      
       console.log('🎮 Manual play initiated');
       console.log('📊 Stream state:', {
-        active: mediaStream.active,
-        tracks: mediaStream.getTracks().length,
-        videoTrackState: mediaStream.getVideoTracks()[0]?.readyState
+        active: activeStream.active,
+        tracks: activeStream.getTracks().length,
+        videoTrackState: activeStream.getVideoTracks()[0]?.readyState
       });
       
+      // Update mediaStream state if it was lost
+      if (!mediaStream && currentStream) {
+        console.log('🔄 Recovering lost mediaStream state');
+        setMediaStream(currentStream);
+      }
+      
       // Verify stream is still active
-      const videoTrack = mediaStream.getVideoTracks()[0];
+      const videoTrack = activeStream.getVideoTracks()[0];
       if (!videoTrack || videoTrack.readyState === 'ended') {
         throw new Error('Video track is no longer active');
       }
       
       // Ensure stream is properly set
-      if (video.srcObject !== mediaStream) {
+      if (video.srcObject !== activeStream) {
         console.log('🔄 Resetting video srcObject');
-        video.srcObject = mediaStream;
+        video.srcObject = activeStream;
       }
       
       // Configure video properties
@@ -724,18 +885,40 @@ const EnhancedAttendanceSystem: React.FC = () => {
       setProcessingInterval(null);
     }
     
-    if (!faceServiceInitialized || !videoRef.current || !mediaStream) {
+    // Get current video element and its stream
+    const video = videoRef.current;
+    const currentStream = video?.srcObject as MediaStream;
+    
+    // Check prerequisites with better stream detection
+    if (!faceServiceInitialized || !video || (!mediaStream && !currentStream)) {
       console.log('❌ Face detection prerequisites not met:', {
         faceServiceInitialized,
-        videoElement: !!videoRef.current,
-        mediaStream: !!mediaStream
+        videoElement: !!video,
+        mediaStream: !!mediaStream,
+        currentStream: !!currentStream,
+        videoSrcObject: !!video?.srcObject,
+        serviceReady: faceRecognitionService.isReady(),
+        serviceStatus: faceRecognitionService.getStatus()
       });
       return;
     }
     
+    // Use the stream from video srcObject if mediaStream state is lost
+    const streamToUse = mediaStream || currentStream;
+    if (!streamToUse) {
+      console.log('❌ No stream available for face detection');
+      setCameraError('No camera stream available');
+      return;
+    }
+    
+    // Update mediaStream state if it was lost but stream exists in video
+    if (!mediaStream && currentStream) {
+      console.log('🔄 Recovering lost mediaStream state from video element');
+      setMediaStream(currentStream);
+    }
+    
     // Verify video and stream are ready
-    const video = videoRef.current;
-    const videoTrack = mediaStream.getVideoTracks()[0];
+    const videoTrack = streamToUse.getVideoTracks()[0];
     
     if (!videoTrack || videoTrack.readyState === 'ended') {
       console.log('❌ Video track not ready for face detection');
@@ -749,29 +932,32 @@ const EnhancedAttendanceSystem: React.FC = () => {
       return;
     }
     
-    console.log('🤖 Starting face detection with health monitoring');
-    console.log('📊 Video state:', {
-      readyState: video.readyState,
-      videoWidth: video.videoWidth,
-      videoHeight: video.videoHeight,
-      paused: video.paused,
-      ended: video.ended
-    });
     
     let consecutiveErrors = 0;
     const maxConsecutiveErrors = 5;
     
     const interval = setInterval(async () => {
       try {
-        // Health check before processing
-        if (!mediaStream || !videoRef.current || !isAIActive) {
-          console.log('🛑 Face detection stopped - prerequisites no longer met');
+        // Get current video and stream state
+        const video = videoRef.current;
+        const currentStream = video?.srcObject as MediaStream;
+        const activeStream = mediaStream || currentStream;
+        
+        // Health check before processing - more robust stream checking
+        if (!activeStream || !video || !isAIActive) {
+          console.log('🛑 Face detection stopped - prerequisites no longer met:', {
+            activeStream: !!activeStream,
+            mediaStream: !!mediaStream,
+            currentStream: !!currentStream,
+            video: !!video,
+            isAIActive
+          });
           clearInterval(interval);
           setProcessingInterval(null);
           return;
         }
         
-        const currentVideoTrack = mediaStream.getVideoTracks()[0];
+        const currentVideoTrack = activeStream.getVideoTracks()[0];
         if (!currentVideoTrack || currentVideoTrack.readyState === 'ended') {
           console.log('🚨 Video track ended during face detection');
           setCameraError('Camera track ended unexpectedly');
@@ -780,10 +966,14 @@ const EnhancedAttendanceSystem: React.FC = () => {
           return;
         }
         
-        const video = videoRef.current;
         if (video.paused || video.ended || video.readyState < 3) {
           console.log('⚠️ Video not in playable state, skipping detection');
           return;
+        }
+        
+        // Update mediaStream state if it was lost
+        if (!mediaStream && currentStream) {
+          setMediaStream(currentStream);
         }
         
         // Perform face recognition
@@ -807,11 +997,71 @@ const EnhancedAttendanceSystem: React.FC = () => {
     console.log('✅ Face detection interval started');
   };
 
+  // Helper function to validate and recover stream state
+  const validateAndRecoverStreamState = (): MediaStream | null => {
+    const video = videoRef.current;
+    const currentStream = video?.srcObject as MediaStream;
+    
+    // If we have a stream in mediaStream state, verify it's still active
+    if (mediaStream) {
+      const videoTrack = mediaStream.getVideoTracks()[0];
+      if (videoTrack && videoTrack.readyState !== 'ended') {
+        return mediaStream;
+      } else {
+        console.log('⚠️ mediaStream has ended tracks');
+      }
+    }
+    
+    // If video element has a stream, use that and sync state
+    if (currentStream) {
+      const videoTrack = currentStream.getVideoTracks()[0];
+      if (videoTrack && videoTrack.readyState !== 'ended') {
+        console.log('🔄 Recovering stream from video element');
+        setMediaStream(currentStream);
+        return currentStream;
+      }
+    }
+    
+    console.log('❌ No valid stream found');
+    return null;
+  };
+
   // Real face detection using face-api.js
   const performFaceRecognition = async () => {
-    if (!isAIActive || !faceServiceInitialized || !videoRef.current) return;
+    if (!isAIActive || !faceServiceInitialized || !videoRef.current) {
+      console.log('⚠️ Skipping face recognition - prerequisites not met:', {
+        isAIActive,
+        faceServiceInitialized,
+        videoElement: !!videoRef.current
+      });
+      return;
+    }
+
+    // Validate and recover stream state before processing
+    const activeStream = validateAndRecoverStreamState();
+    if (!activeStream) {
+      console.log('⚠️ No valid stream for face recognition');
+      setFaceServiceError('Camera stream not available');
+      return;
+    }
+
+    // Check if we have known faces loaded
+    const knownFaces = faceRecognitionService.getKnownFaceNames();
+    console.log('👥 Known faces in service:', knownFaces);
+    
+    if (knownFaces.length === 0) {
+      console.warn('⚠️ No known faces loaded in face recognition service!');
+      // You may want to continue anyway to at least detect unknown faces
+    }
 
     try {
+      console.log('🔍 Performing face recognition...');
+      console.log('🎯 AI Settings:', {
+        confidenceThreshold: aiSettings.confidenceThreshold,
+        enableAutoConfirm: aiSettings.enableAutoConfirm,
+        enableEmotionDetection: aiSettings.enableEmotionDetection
+      });
+      
       // Perform face recognition on the video element
       const recognitionResults = await faceRecognitionService.detectAndRecognizeFaces(
         videoRef.current,
@@ -822,25 +1072,51 @@ const EnhancedAttendanceSystem: React.FC = () => {
         }
       );
 
+      console.log(`👥 Face recognition returned ${recognitionResults.length} results`);
+      console.log('🔍 Raw recognition results:', recognitionResults);
+      console.log(`👨‍🎓 Available students:`, students.map(s => ({ id: s.student_id, name: s.student_name })));
+
       // Convert face-api.js results to our FaceDetection format
       const detections: FaceDetection[] = recognitionResults.map(result => {
+        console.log(`🔍 Processing face recognition result:`, { name: result.name, confidence: result.confidence });
+        
         // Find matching student by name
         const matchingStudent = students.find(s => 
           s.student_name.toLowerCase().includes(result.name.toLowerCase()) ||
           result.name.toLowerCase().includes(s.student_name.toLowerCase())
         );
 
+        console.log(`🎯 Matching logic for "${result.name}":`, {
+          foundMatch: !!matchingStudent,
+          matchedStudent: matchingStudent ? { id: matchingStudent.student_id, name: matchingStudent.student_name } : null
+        });
+
         const confidence = Math.round(result.confidence * 100);
+        
+        console.log(`🎯 Processing detection: ${result.name} -> ${matchingStudent?.student_name || 'No match'} (${confidence}%)`);
+        
+        // Get video element dimensions for proper bbox scaling
+        const video = videoRef.current!;
+        const videoRect = video.getBoundingClientRect();
+        const scaleX = videoRect.width / videoDimensions.width;
+        const scaleY = videoRect.height / videoDimensions.height;
+        
+        // Account for mirrored video (scaleX(-1) transform)
+        // Mirror the x-coordinate: flipped_x = video_width - (original_x + box_width)
+        const scaledWidth = result.box.width * scaleX;
+        const mirroredX = videoRect.width - ((result.box.x * scaleX) + scaledWidth);
+        
         const detection: FaceDetection = {
           id: Date.now().toString() + Math.random(),
           studentId: matchingStudent?.student_id,
           studentName: matchingStudent?.student_name || result.name,
           confidence,
           timestamp: new Date().toLocaleTimeString(),
-          x: result.box.x,
-          y: result.box.y,
-          width: result.box.width,
-          height: result.box.height,
+          // Scale and mirror bbox coordinates to match displayed video
+          x: mirroredX,
+          y: result.box.y * scaleY,
+          width: scaledWidth,
+          height: result.box.height * scaleY,
           emotion: getEmotionFromExpressions(result.expressions),
           status: confidence >= aiSettings.confidenceThreshold ? 'detected' : 'unknown'
         };
@@ -849,18 +1125,74 @@ const EnhancedAttendanceSystem: React.FC = () => {
       });
 
       // Update face detections state
+      console.log(`📊 Generated ${detections.length} detections:`, detections.map(d => ({
+        id: d.id,
+        studentName: d.studentName,
+        studentId: d.studentId,
+        confidence: d.confidence,
+        status: d.status
+      })));
       setFaceDetections(detections);
 
-      // Process confirmed detections
+      // Process confirmed detections and automatically mark attendance
+      console.log(`🔄 Processing ${detections.length} detections for automatic attendance...`);
       for (const detection of detections) {
+        console.log(`🔍 Processing detection: ${detection.studentName}, Status: ${detection.status}, StudentID: ${detection.studentId}, Confidence: ${detection.confidence}%`);
+        
         if (detection.status === 'detected' && detection.studentId) {
           // Check if this student hasn't been marked present yet
-          if (aiAttendance[detection.studentId] !== 'present') {
+          const currentAttendanceStatus = aiAttendance[detection.studentId];
+          console.log(`👤 Current attendance status for ${detection.studentName} (ID: ${detection.studentId}): ${currentAttendanceStatus}`);
+          
+          if (currentAttendanceStatus !== 'present') {
+            console.log(`✅ Auto-marking attendance for: ${detection.studentName} (ID: ${detection.studentId})`);
+            
+            // Immediately mark attendance when face is detected with high confidence
+            setAiAttendance(prev => {
+              const newAttendance = {
+                ...prev,
+                [detection.studentId!]: 'present' as const
+              };
+              console.log(`📝 Updated attendance state:`, newAttendance);
+              return newAttendance;
+            });
+            
+            // Add notification
+            const notificationId = Date.now().toString();
+            setAttendanceNotifications(prev => [{
+              id: notificationId,
+              studentName: detection.studentName || 'Unknown Student',
+              timestamp: Date.now()
+            }, ...prev.slice(0, 4)]); // Keep only last 5 notifications
+            
+            // Remove notification after 5 seconds
+            setTimeout(() => {
+              setAttendanceNotifications(prev => prev.filter(n => n.id !== notificationId));
+            }, 5000);
+            
+            // Add to detection log
             addToDetectionLog(detection);
             
+            // Update session stats
+            setSessionStats(prev => ({
+              ...prev,
+              confirmedCount: prev.confirmedCount + 1
+            }));
+            
+            // Auto-save attendance if enabled
             if (aiSettings.enableAutoConfirm) {
-              setTimeout(() => confirmDetection(detection), aiSettings.autoConfirmDelay * 1000);
+              console.log(`💾 Auto-saving attendance for ${detection.studentName}`);
+              setTimeout(() => {
+                saveAttendance(detection.studentId!);
+              }, 1000); // Save after 1 second delay
             }
+          } else {
+            console.log(`⏭️ Student ${detection.studentName} already marked as present, skipping`);
+          }
+        } else {
+          console.log(`❌ Detection not processed - Status: ${detection.status}, StudentID: ${detection.studentId || 'undefined'}`);
+          if (detection.status !== 'detected') {
+            console.log(`🔍 Detection confidence ${detection.confidence}% below threshold ${aiSettings.confidenceThreshold}%`);
           }
         }
 
@@ -911,7 +1243,12 @@ const EnhancedAttendanceSystem: React.FC = () => {
       confidence: detection.confidence
     };
 
-    setDetectionLog(prev => [logEntry, ...prev.slice(0, 9)]);
+    setDetectionLog(prev => {
+      // Remove any existing entries with the same student name
+      const filteredLog = prev.filter(log => log.studentName !== logEntry.studentName);
+      // Add the new entry at the beginning and keep only 10 entries
+      return [logEntry, ...filteredLog.slice(0, 9)];
+    });
   };
 
   const confirmDetection = (detection: FaceDetection) => {
@@ -999,6 +1336,98 @@ const EnhancedAttendanceSystem: React.FC = () => {
           </div>
           
           <div className="flex items-center gap-3">
+            {/* Camera Selection Button */}
+            {availableCameras.length > 1 && !isAIActive && (
+              <div className="relative camera-selector">
+                <button
+                  onClick={() => setShowCameraSelector(!showCameraSelector)}
+                  className="flex items-center gap-2 px-4 py-2 bg-white/20 text-white rounded-xl hover:bg-white/30 transition-all"
+                >
+                  <Camera className="w-4 h-4" />
+                  <span>Camera ({availableCameras.findIndex(c => c.deviceId === selectedCameraId) + 1})</span>
+                </button>
+                
+                {showCameraSelector && (
+                  <div className="absolute top-full mt-2 right-0 bg-white rounded-xl shadow-lg border border-gray-200 py-2 min-w-64 z-50">
+                    <div className="px-3 py-2 text-sm font-semibold text-gray-700 border-b border-gray-100">
+                      Select Camera
+                    </div>
+                    {availableCameras.map((camera, index) => (
+                      <button
+                        key={camera.deviceId}
+                        onClick={() => {
+                          setSelectedCameraId(camera.deviceId);
+                          setShowCameraSelector(false);
+                          console.log(`📷 Camera selected: ${camera.label || `Camera ${index + 1}`}`);
+                        }}
+                        className={`w-full text-left px-3 py-2 hover:bg-gray-50 transition-colors ${
+                          selectedCameraId === camera.deviceId ? 'bg-purple-50 text-purple-700' : 'text-gray-700'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2">
+                          <Camera className="w-4 h-4" />
+                          <div>
+                            <div className="font-medium">
+                              {camera.label || `Camera ${index + 1}`}
+                            </div>
+                            <div className="text-xs text-gray-500">
+                              {camera.deviceId === selectedCameraId ? 'Currently selected' : 'Available'}
+                            </div>
+                          </div>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+            
+            {/* Debug button for testing face recognition */}
+            {isVideoPlaying && (
+              <div className="flex gap-2">
+                <button
+                  onClick={() => {
+                    console.log('🧪 Manual face recognition test triggered');
+                    performFaceRecognition();
+                  }}
+                  className="flex items-center gap-2 px-4 py-2 bg-yellow-500/20 text-white rounded-xl hover:bg-yellow-500/30 transition-all"
+                >
+                  <Eye className="w-4 h-4" />
+                  <span>Test Recognition</span>
+                </button>
+                
+                <button
+                  onClick={() => {
+                    console.log('🧪 Testing automatic attendance with dummy data');
+                    if (students.length > 0) {
+                      const testStudent = students[0];
+                      console.log('📝 Test marking attendance for:', testStudent.student_name);
+                      setAiAttendance(prev => ({
+                        ...prev,
+                        [testStudent.student_id]: 'present' as const
+                      }));
+                      
+                      // Add test notification
+                      const notificationId = Date.now().toString();
+                      setAttendanceNotifications(prev => [{
+                        id: notificationId,
+                        studentName: testStudent.student_name,
+                        timestamp: Date.now()
+                      }, ...prev.slice(0, 4)]);
+                      
+                      setTimeout(() => {
+                        setAttendanceNotifications(prev => prev.filter(n => n.id !== notificationId));
+                      }, 5000);
+                    }
+                  }}
+                  className="flex items-center gap-2 px-4 py-2 bg-green-500/20 text-white rounded-xl hover:bg-green-500/30 transition-all"
+                >
+                  <CheckCircle className="w-4 h-4" />
+                  <span>Test Auto-Mark</span>
+                </button>
+              </div>
+            )}
+            
             {!faceServiceInitialized && (
               <div className="flex items-center gap-2 px-3 py-2 bg-yellow-100 text-yellow-800 rounded-lg text-sm">
                 <RefreshCw className="w-4 h-4 animate-spin" />
@@ -1048,6 +1477,24 @@ const EnhancedAttendanceSystem: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Attendance Notifications */}
+      {attendanceNotifications.length > 0 && (
+        <div className="fixed top-4 right-4 z-50 space-y-2">
+          {attendanceNotifications.map((notification) => (
+            <div
+              key={notification.id}
+              className="bg-green-500 text-white px-6 py-3 rounded-xl shadow-lg flex items-center gap-3 animate-slide-in-right"
+            >
+              <CheckCircle className="w-5 h-5" />
+              <div>
+                <div className="font-semibold">Attendance Marked</div>
+                <div className="text-sm text-green-100">{notification.studentName} - Present</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* AI Detection Interface */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -1147,16 +1594,25 @@ const EnhancedAttendanceSystem: React.FC = () => {
                     </div>
                     
                     {/* Debug info panel */}
-                    <div className="bg-black/70 text-white text-xs p-2 rounded-lg backdrop-blur-sm">
+                    <div className="bg-black/70 text-white text-xs p-2 rounded-lg backdrop-blur-sm max-w-64">
                       <div>Stream: {mediaStream.active ? '✅ Active' : '❌ Inactive'}</div>
                       <div>Tracks: {mediaStream.getTracks().length}</div>
                       <div>Video: {isVideoPlaying ? '▶️ Playing' : '⏸️ Paused'}</div>
                       <div>AI: {isAIActive ? '🤖 Active' : '😴 Inactive'}</div>
+                      <div>Dimensions: {videoDimensions.width}x{videoDimensions.height}</div>
                       {videoRef.current && (
                         <>
                           <div>Ready State: {videoRef.current.readyState}</div>
-                          <div>Size: {videoRef.current.videoWidth}x{videoRef.current.videoHeight}</div>
+                          <div>Display: {videoRef.current.videoWidth}x{videoRef.current.videoHeight}</div>
                         </>
+                      )}
+                      {availableCameras.length > 0 && (
+                        <div className="mt-1 pt-1 border-t border-white/20">
+                          <div>Camera: {availableCameras.findIndex(c => c.deviceId === selectedCameraId) + 1}/{availableCameras.length}</div>
+                          <div className="truncate">
+                            {availableCameras.find(c => c.deviceId === selectedCameraId)?.label || 'Unknown Camera'}
+                          </div>
+                        </div>
                       )}
                     </div>
                   </div>
@@ -1222,16 +1678,19 @@ const EnhancedAttendanceSystem: React.FC = () => {
                   key={detection.id}
                   className="absolute border-2 border-green-400 bg-green-400/20 rounded-lg animate-pulse z-15"
                   style={{
-                    left: `${(detection.x / 640) * 100}%`,
-                    top: `${(detection.y / 480) * 100}%`,
-                    width: `${(detection.width / 640) * 100}%`,
-                    height: `${(detection.height / 480) * 100}%`
+                    left: `${detection.x}px`,
+                    top: `${detection.y}px`,
+                    width: `${detection.width}px`,
+                    height: `${detection.height}px`
                   }}
                 >
                   <div className="absolute -top-12 left-0 bg-green-400 text-black px-2 py-1 rounded-lg text-sm font-semibold flex items-center gap-1 whitespace-nowrap">
                     <span>{detection.studentName}</span>
                     <span className="text-xs">({detection.confidence}%)</span>
                     {getEmotionIcon(detection.emotion)}
+                    {detection.studentId && aiAttendance[detection.studentId] === 'present' && (
+                      <span className="text-xs bg-green-600 text-white px-1 rounded ml-1">✓ MARKED</span>
+                    )}
                   </div>
                   
                   {!aiSettings.enableAutoConfirm && (

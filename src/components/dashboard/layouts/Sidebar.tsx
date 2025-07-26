@@ -20,9 +20,11 @@ interface SidebarProps {
   isCollapsed: boolean;
   onToggleCollapse: () => void;
   userType: 'parent' | 'teacher';
+  isMobile?: boolean;
+  isMobileOpen?: boolean;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onToggleCollapse, userType }) => {
+const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onToggleCollapse, userType, isMobile = false, isMobileOpen = false }) => {
   const location = useLocation();
 
   // Only show teacher nav items for teacher dashboard
@@ -127,12 +129,12 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onToggleCollapse, userTy
 
   return (
     <div className={`teacher-sidebar flex flex-col h-full transition-all duration-500 ease-in-out ${
-      isCollapsed ? 'w-16' : 'w-80'
-    }`}>
+      isCollapsed ? 'w-16 collapsed' : 'w-80'
+    } ${isMobile ? (isMobileOpen ? 'mobile-open' : '') : ''}`}>
       {/* Enhanced Header */}
-      <div className="flex items-center justify-between p-6 border-b border-white/10">
+      <div className="sidebar-header flex items-center justify-between p-6 border-b border-white/10">
         {!isCollapsed && (
-          <div className="flex items-center space-x-4">
+          <div className="header-content flex items-center space-x-4">
             <div className="w-10 h-10 bg-gradient-to-br from-coral to-accent rounded-xl flex items-center justify-center shadow-lg">
               <GraduationCap className="w-6 h-6 text-white" />
             </div>
@@ -149,7 +151,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onToggleCollapse, userTy
         )}
         <button
           onClick={onToggleCollapse}
-          className="p-2 rounded-xl bg-white/10 hover:bg-white/20 transition-all duration-300 group"
+          className="p-2 rounded-xl bg-white/10 hover:bg-white/20 transition-all duration-300 group flex-shrink-0"
           aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
         >
           {isCollapsed ? (
@@ -161,11 +163,11 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onToggleCollapse, userTy
       </div>
 
       {/* Enhanced Navigation */}
-      <nav className="flex-1 overflow-y-auto py-6 space-y-8">
+      <nav className="sidebar-content flex-1 overflow-y-auto py-6 space-y-8">
         {navigationSections.map((section) => (
           <div key={section.title} className="px-4">
             {!isCollapsed && (
-              <h3 className="text-white/40 text-xs font-semibold uppercase tracking-wider mb-4 px-4">
+              <h3 className="nav-text text-white/40 text-xs font-semibold uppercase tracking-wider mb-4 px-4">
                 {section.title}
               </h3>
             )}
@@ -179,7 +181,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onToggleCollapse, userTy
                     key={item.name}
                     to={item.href}
                     className={`teacher-nav-item group flex items-center px-4 py-4 text-sm font-medium 
-                      rounded-xl transition-all duration-300 ease-in-out relative overflow-hidden ${
+                      rounded-xl transition-all duration-300 ease-in-out relative ${
                       isActive 
                         ? 'active text-white bg-white/15 shadow-lg scale-105' 
                         : 'text-white/80 hover:text-white hover:bg-white/10 hover:scale-102'
@@ -191,38 +193,36 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onToggleCollapse, userTy
                       isActive ? 'scale-100' : 'scale-0 group-hover:scale-100'
                     }`} />
                     
-                    <item.icon className={`flex-shrink-0 relative z-10 transition-all duration-300 ${
-                      isCollapsed ? 'w-6 h-6' : 'w-5 h-5 mr-4'
+                    <item.icon className={`nav-icon flex-shrink-0 relative z-10 transition-all duration-300 ${
+                      isCollapsed ? 'w-6 h-6' : 'w-5 h-5'
                     } ${isActive ? 'text-coral' : 'group-hover:text-coral'}`} />
                     
                     {!isCollapsed && (
-                      <>
-                        <div className="flex-1 relative z-10">
-                          <div className="flex items-center">
-                            <span className="font-medium">{item.name}</span>
-                            {item.isNew && (
-                              <span className="ml-3 px-2 py-1 text-xs bg-coral text-white rounded-full 
-                                font-semibold animate-pulse">
-                                NEW
-                              </span>
-                            )}
-                          </div>
-                          <p className="text-white/50 text-xs mt-1 transition-colors group-hover:text-white/70">
-                            {item.description}
-                          </p>
+                      <div className="nav-content flex-1 relative z-10 ml-4">
+                        <div className="flex items-center">
+                          <span className="font-medium">{item.name}</span>
+                          {item.isNew && (
+                            <span className="ml-3 px-2 py-1 text-xs bg-coral text-white rounded-full 
+                              font-semibold animate-pulse">
+                              NEW
+                            </span>
+                          )}
                         </div>
+                        <p className="text-white/50 text-xs mt-1 transition-colors group-hover:text-white/70">
+                          {item.description}
+                        </p>
+                      </div>
+                    )}
                         
-                        {/* Active Indicator */}
-                        {isActive && (
-                          <div className="absolute right-0 top-1/2 transform -translate-y-1/2 w-1 h-8 
-                            bg-gradient-to-b from-coral to-mint rounded-l-full shadow-lg" />
-                        )}
-                      </>
+                    {/* Active Indicator */}
+                    {isActive && !isCollapsed && (
+                      <div className="absolute right-0 top-1/2 transform -translate-y-1/2 w-1 h-8 
+                        bg-gradient-to-b from-coral to-mint rounded-l-full shadow-lg" />
                     )}
 
                     {/* Enhanced Tooltip for collapsed state */}
                     {isCollapsed && (
-                      <div className="absolute left-full ml-4 px-3 py-2 bg-gray-900/95 text-white text-sm 
+                      <div className="tooltip absolute left-full ml-4 px-3 py-2 bg-gray-900/95 text-white text-sm 
                         rounded-lg opacity-0 pointer-events-none group-hover:opacity-100 transition-all 
                         duration-300 whitespace-nowrap z-50 shadow-lg backdrop-blur-sm border border-white/10">
                         <div className="font-medium">{item.name}</div>
@@ -246,9 +246,9 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onToggleCollapse, userTy
       </nav>
 
       {/* Enhanced Footer */}
-      {!isCollapsed && (
-        <div className="p-6 border-t border-white/10">
-          <div className="flex items-center space-x-4 p-4 bg-white/5 rounded-xl backdrop-blur-sm 
+      <div className="sidebar-footer p-6 border-t border-white/10">
+        {!isCollapsed && (
+          <div className="footer-content flex items-center space-x-4 p-4 bg-white/5 rounded-xl backdrop-blur-sm 
             border border-white/10 hover:bg-white/10 transition-all duration-300">
             <div className="w-10 h-10 bg-gradient-to-br from-mint to-success rounded-xl 
               flex items-center justify-center shadow-lg">
@@ -260,20 +260,18 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onToggleCollapse, userTy
             </div>
             <div className="w-3 h-3 bg-mint rounded-full animate-pulse shadow-lg" />
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Collapsed Footer */}
-      {isCollapsed && (
-        <div className="p-4 border-t border-white/10">
+        {/* Collapsed Footer */}
+        {isCollapsed && (
           <div className="w-10 h-10 bg-gradient-to-br from-mint to-success rounded-xl 
             flex items-center justify-center shadow-lg mx-auto relative">
             <span className="text-white text-sm font-bold">T</span>
             <div className="absolute -top-1 -right-1 w-4 h-4 bg-mint rounded-full 
               animate-pulse shadow-lg border-2 border-white/20" />
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 };
