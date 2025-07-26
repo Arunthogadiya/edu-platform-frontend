@@ -1,0 +1,909 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { 
+  Bot, 
+  Send, 
+  Mic, 
+  MicOff, 
+  Upload, 
+  Image as ImageIcon, 
+  FileText,
+  Sparkles,
+  Volume2,
+  VolumeX,
+  Trash2,
+  Download,
+  Settings,
+  X,
+  MessageSquare,
+  User,
+  CheckCircle,
+  Copy,
+  RefreshCw,
+  BookOpen,
+  Users,
+  Calendar,
+  BarChart3,
+  Target,
+  Lightbulb
+} from 'lucide-react';
+import { authService } from '../../../../services/authService';
+import './AITeachingHub.css';
+import ReactMarkdown from 'react-markdown';
+
+interface Message {
+  id: string;
+  type: 'user' | 'assistant';
+  content: string;
+  timestamp: Date;
+  resources?: string[];
+  attachments?: {
+    type: 'image' | 'file';
+    name: string;
+    url: string;
+    size?: number;
+  }[];
+  confidence?: number;
+  processing?: boolean;
+}
+
+interface QuickPrompt {
+  id: string;
+  title: string;
+  description: string;
+  prompt: string;
+  icon: React.ElementType;
+  category: 'teaching' | 'assessment' | 'analytics' | 'planning';
+  color: string;
+}
+
+interface VoiceSettings {
+  enabled: boolean;
+  autoPlay: boolean;
+  speed: number;
+  voice: string;
+}
+
+const AITeachingHub: React.FC = () => {
+  // Core state
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [inputText, setInputText] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [sessionId, setSessionId] = useState<string>('');
+
+  // Voice and interaction states
+  const [isRecording, setIsRecording] = useState(false);
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [voiceSettings, setVoiceSettings] = useState<VoiceSettings>({
+    enabled: true,
+    autoPlay: false,
+    speed: 1,
+    voice: 'default'
+  });
+  
+  // UI state
+  const [showQuickPrompts, setShowQuickPrompts] = useState(true);
+  const [showSettings, setShowSettings] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  
+  // File handling
+  const [dragOver, setDragOver] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  
+  // Refs
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const speechSynthesisRef = useRef<SpeechSynthesis | null>(null);
+
+  // Quick prompts for teachers
+  const quickPrompts: QuickPrompt[] = [
+    {
+      id: 'lesson-plan',
+      title: 'Generate Lesson Plan',
+      description: 'Create a comprehensive lesson plan for any topic',
+      prompt: 'Help me create a detailed lesson plan for [subject] on [topic] for [grade] students. Include objectives, activities, and assessment methods.',
+      icon: BookOpen,
+      category: 'planning',
+      color: 'from-blue-500 to-blue-600'
+    },
+    {
+      id: 'student-analysis',
+      title: 'Analyze Student Performance',
+      description: 'Get insights on student progress and recommendations',
+      prompt: 'Analyze the performance data for my students and provide actionable insights on improvement strategies.',
+      icon: BarChart3,
+      category: 'analytics',
+      color: 'from-purple-500 to-purple-600'
+    },
+    {
+      id: 'engagement-strategies',
+      title: 'Engagement Strategies',
+      description: 'Get innovative ways to engage students',
+      prompt: 'Suggest creative engagement strategies for students who seem disinterested in [subject]. Include interactive activities and modern teaching methods.',
+      icon: Sparkles,
+      category: 'teaching',
+      color: 'from-emerald-500 to-emerald-600'
+    },
+    {
+      id: 'assessment-creation',
+      title: 'Create Assessment',
+      description: 'Generate quizzes, tests, and rubrics',
+      prompt: 'Create a comprehensive assessment for [subject] covering [topics]. Include multiple question types and a detailed rubric.',
+      icon: Target,
+      category: 'assessment',
+      color: 'from-orange-500 to-orange-600'
+    },
+    {
+      id: 'behavior-management',
+      title: 'Behavior Management',
+      description: 'Strategies for classroom management',
+      prompt: 'Provide behavior management strategies for [specific situation]. Include positive reinforcement techniques and intervention approaches.',
+      icon: Users,
+      category: 'teaching',
+      color: 'from-indigo-500 to-indigo-600'
+    },
+    {
+      id: 'parent-communication',
+      title: 'Parent Communication',
+      description: 'Draft professional parent communications',
+      prompt: 'Help me draft a professional communication to parents about [topic]. Make it clear, respectful, and actionable.',
+      icon: MessageSquare,
+      category: 'planning',
+      color: 'from-teal-500 to-teal-600'
+    },
+    {
+      id: 'differentiation',
+      title: 'Differentiated Learning',
+      description: 'Adapt content for diverse learners',
+      prompt: 'Suggest differentiated learning approaches for [topic] that accommodate visual, auditory, and kinesthetic learners.',
+      icon: Lightbulb,
+      category: 'teaching',
+      color: 'from-yellow-500 to-yellow-600'
+    },
+    {
+      id: 'schedule-optimization',
+      title: 'Schedule Planning',
+      description: 'Optimize class schedules and time management',
+      prompt: 'Help me optimize my teaching schedule for maximum effectiveness. Consider pacing, breaks, and student attention spans.',
+      icon: Calendar,
+      category: 'planning',
+      color: 'from-pink-500 to-pink-600'
+    }
+  ];
+
+  // Welcome message
+  const welcomeMessage: Message = {
+    id: 'welcome',
+    type: 'assistant',
+    content: `# Welcome to AI Teaching Hub! 🎓
+
+I'm your intelligent teaching assistant, designed to help you excel in education. Here's what I can do for you:
+
+## 🚀 **Key Features:**
+- **Lesson Planning**: Create comprehensive, engaging lesson plans
+- **Student Analytics**: Analyze performance and behavior patterns  
+- **Assessment Creation**: Generate quizzes, tests, and rubrics
+- **Teaching Strategies**: Get innovative engagement techniques
+- **Professional Communication**: Draft emails and reports
+
+## 💡 **How to Get Started:**
+1. **Text Input**: Type your questions or requests
+2. **Voice Input**: Click the microphone for voice commands  
+3. **File Upload**: Share documents or images for analysis
+4. **Quick Prompts**: Use the suggested prompts below
+
+## 🎯 **Pro Tips:**
+- Be specific about grade level and subject
+- Include context about your students
+- Ask follow-up questions for deeper insights
+- Use voice commands for hands-free interaction
+
+Ready to transform your teaching experience? Let's get started! 🌟`,
+    timestamp: new Date(),
+    resources: []
+  };
+
+  // Initialize component
+  useEffect(() => {
+    setMessages([welcomeMessage]);
+    if (inputRef.current) {
+      inputRef.current.focus();
+    }
+    
+    // Initialize speech synthesis
+    if ('speechSynthesis' in window) {
+      speechSynthesisRef.current = window.speechSynthesis;
+    }
+  }, []);
+
+  // Auto-scroll to bottom
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  // Text message submission
+    });
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!inputText.trim() || isLoading) return;
+
+    const newMessage: Message = {
+      id: Date.now().toString(),
+      type: 'user',
+      content: inputText.trim(),
+      timestamp: new Date()
+    };
+
+    setMessages(prev => [...prev, newMessage]);
+    setInputText('');
+    setIsLoading(true);
+    setShowQuickPrompts(false);
+
+    try {
+      // Add processing message
+      const processingMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        type: 'assistant',
+        content: '🤔 Analyzing your request and generating insights...',
+        timestamp: new Date(),
+        processing: true
+      };
+      
+      setMessages(prev => [...prev, processingMessage]);
+
+      // Simulate AI processing with realistic delay
+      setTimeout(async () => {
+        try {
+          const response = await chatbotService.submitTextQuery(inputText.trim(), 1);
+          
+          const aiResponse: Message = {
+            id: (Date.now() + 2).toString(),
+            type: 'assistant',
+            content: response.response || 'I apologize, but I encountered an issue processing your request. Could you please try rephrasing your question?',
+            timestamp: new Date(),
+            resources: response.resources,
+            confidence: Math.floor(Math.random() * 20) + 80 // Simulated confidence
+          };
+          
+          // Remove processing message and add AI response
+          setMessages(prev => prev.filter(msg => !msg.processing).concat([aiResponse]));
+          
+          // Auto-speak if enabled
+          if (voiceSettings.enabled && voiceSettings.autoPlay) {
+            speakText(aiResponse.content);
+          }
+        } catch (error) {
+          console.error('Failed to get AI response:', error);
+          const errorMessage: Message = {
+            id: (Date.now() + 2).toString(),
+            type: 'assistant',
+            content: '❌ I apologize, but I\'m having trouble connecting to my knowledge base right now. Please try again in a moment, or check your internet connection.',
+            timestamp: new Date()
+          };
+          setMessages(prev => prev.filter(msg => !msg.processing).concat([errorMessage]));
+        }
+      }, 1500);
+      
+    } catch (error) {
+      console.error('Failed to process request:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Voice recording
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = [];
+
+      mediaRecorder.ondataavailable = (event) => {
+        audioChunksRef.current.push(event.data);
+      };
+
+      mediaRecorder.onstop = async () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/wav' });
+        await processVoiceInput(audioBlob);
+        stream.getTracks().forEach(track => track.stop());
+      };
+
+      mediaRecorder.start();
+      setIsRecording(true);
+    } catch (error) {
+      console.error('Failed to start recording:', error);
+      alert('Unable to access microphone. Please check your permissions.');
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+    }
+  };
+
+  const processVoiceInput = async (audioBlob: Blob) => {
+    setIsLoading(true);
+    try {
+      const reader = new FileReader();
+      reader.readAsDataURL(audioBlob);
+      reader.onloadend = async () => {
+        const base64Audio = reader.result?.toString().split(',')[1];
+        if (base64Audio) {
+          const response = await chatbotService.submitVoiceQuery(base64Audio, 1);
+          
+          // Add user message (transcript)
+          const userMessage: Message = {
+            id: Date.now().toString(),
+            type: 'user',
+            content: response.transcript || 'Voice message processed',
+            timestamp: new Date()
+          };
+          
+          // Add AI response
+          const aiMessage: Message = {
+            id: (Date.now() + 1).toString(),
+            type: 'assistant',
+            content: response.response,
+            timestamp: new Date(),
+            resources: response.resources
+          };
+          
+          setMessages(prev => [...prev, userMessage, aiMessage]);
+          
+          if (voiceSettings.enabled && voiceSettings.autoPlay) {
+            speakText(aiMessage.content);
+          }
+        }
+      };
+    } catch (error) {
+      console.error('Failed to process voice input:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Text-to-speech
+  const speakText = (text: string) => {
+    if (!speechSynthesisRef.current || !voiceSettings.enabled) return;
+    
+    // Clean text for speech
+    const cleanText = text.replace(/[#*_`\[\]]/g, '').replace(/\n+/g, '. ');
+    
+    speechSynthesisRef.current.cancel();
+    const utterance = new SpeechSynthesisUtterance(cleanText);
+    utterance.rate = voiceSettings.speed;
+    
+    utterance.onstart = () => setIsSpeaking(true);
+    utterance.onend = () => setIsSpeaking(false);
+    utterance.onerror = () => setIsSpeaking(false);
+    
+    speechSynthesisRef.current.speak(utterance);
+  };
+
+  const stopSpeaking = () => {
+    if (speechSynthesisRef.current) {
+      speechSynthesisRef.current.cancel();
+      setIsSpeaking(false);
+    }
+  };
+
+  // File handling
+  const handleFileUpload = (files: FileList) => {
+    setUploading(true);
+    Array.from(files).forEach(file => {
+      const message: Message = {
+        id: Date.now().toString() + file.name,
+        type: 'user',
+        content: `📎 Uploaded: ${file.name}`,
+        timestamp: new Date(),
+        attachments: [{
+          type: file.type.startsWith('image/') ? 'image' : 'file',
+          name: file.name,
+          url: URL.createObjectURL(file),
+          size: file.size
+        }]
+      };
+      setMessages(prev => [...prev, message]);
+    });
+    setUploading(false);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(false);
+    if (e.dataTransfer.files) {
+      handleFileUpload(e.dataTransfer.files);
+    }
+  };
+
+  // Quick prompt handling
+  const handleQuickPrompt = (prompt: QuickPrompt) => {
+    setInputText(prompt.prompt);
+    setShowQuickPrompts(false);
+    if (inputRef.current) {
+      inputRef.current.focus();
+    }
+  };
+
+  // Utility functions
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+  };
+
+  const clearChat = () => {
+    if (confirm('Are you sure you want to clear the chat history?')) {
+      setMessages([welcomeMessage]);
+      setShowQuickPrompts(true);
+    }
+  };
+
+  const exportChat = () => {
+    const chatHistory = messages.map(msg => 
+      `[${msg.timestamp.toLocaleString()}] ${msg.type === 'user' ? 'You' : 'AI Assistant'}: ${msg.content}`
+    ).join('\n\n');
+    
+    const blob = new Blob([chatHistory], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `ai-teaching-chat-${new Date().toISOString().split('T')[0]}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const filteredPrompts = selectedCategory === 'all' 
+    ? quickPrompts 
+    : quickPrompts.filter(p => p.category === selectedCategory);
+
+  const categories = [
+    { id: 'all', label: 'All', icon: Sparkles },
+    { id: 'teaching', label: 'Teaching', icon: BookOpen },
+    { id: 'assessment', label: 'Assessment', icon: Target },
+    { id: 'analytics', label: 'Analytics', icon: BarChart3 },
+    { id: 'planning', label: 'Planning', icon: Calendar }
+  ];
+
+  return (
+    <div className="ai-teaching-hub h-full flex flex-col">
+      {/* Header */}
+      <div className="ai-hub-header p-6 border-b border-neutral-200 bg-gradient-to-r from-blue-50 to-purple-50">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className="p-3 bg-gradient-to-br from-blue-600 to-purple-600 rounded-2xl shadow-lg">
+              <Bot className="w-8 h-8 text-white" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-neutral-900 flex items-center gap-2">
+                AI Teaching Hub
+                <span className="text-sm bg-gradient-to-r from-blue-600 to-purple-600 text-transparent bg-clip-text font-normal">
+                  BETA
+                </span>
+              </h1>
+              <p className="text-neutral-600">Your intelligent teaching assistant</p>
+            </div>
+          </div>
+          
+          <div className="flex items-center gap-3">
+            {/* Voice toggle */}
+            <button
+              onClick={() => isSpeaking ? stopSpeaking() : setVoiceSettings(prev => ({ ...prev, enabled: !prev.enabled }))}
+              className={`p-3 rounded-xl transition-all ${
+                voiceSettings.enabled 
+                  ? 'bg-blue-100 text-blue-700 hover:bg-blue-200' 
+                  : 'bg-neutral-100 text-neutral-500 hover:bg-neutral-200'
+              }`}
+              title={voiceSettings.enabled ? 'Voice enabled' : 'Voice disabled'}
+            >
+              {isSpeaking ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5" />}
+            </button>
+            
+            {/* Settings */}
+            <button
+              onClick={() => setShowSettings(!showSettings)}
+              className="p-3 rounded-xl bg-neutral-100 text-neutral-600 hover:bg-neutral-200 transition-all"
+              title="Settings"
+            >
+              <Settings className="w-5 h-5" />
+            </button>
+            
+            {/* Export */}
+            <button
+              onClick={exportChat}
+              className="p-3 rounded-xl bg-neutral-100 text-neutral-600 hover:bg-neutral-200 transition-all"
+              title="Export chat"
+            >
+              <Download className="w-5 h-5" />
+            </button>
+            
+            {/* Clear chat */}
+            <button
+              onClick={clearChat}
+              className="p-3 rounded-xl bg-red-100 text-red-600 hover:bg-red-200 transition-all"
+              title="Clear chat"
+            >
+              <Trash2 className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Quick Prompts */}
+      {showQuickPrompts && (
+        <div className="ai-hub-prompts p-6 border-b border-neutral-200 bg-white">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-bold text-neutral-900">Quick Start Prompts</h3>
+            <button
+              onClick={() => setShowQuickPrompts(false)}
+              className="p-2 rounded-lg text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+          
+          {/* Category filters */}
+          <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
+            {categories.map(category => (
+              <button
+                key={category.id}
+                onClick={() => setSelectedCategory(category.id)}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl whitespace-nowrap transition-all ${
+                  selectedCategory === category.id
+                    ? 'bg-blue-600 text-white shadow-lg'
+                    : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200'
+                }`}
+              >
+                <category.icon className="w-4 h-4" />
+                {category.label}
+              </button>
+            ))}
+          </div>
+          
+          {/* Prompt grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {filteredPrompts.map(prompt => (
+              <button
+                key={prompt.id}
+                onClick={() => handleQuickPrompt(prompt)}
+                className="text-left p-4 rounded-xl border border-neutral-200 hover:shadow-lg hover:border-blue-300 transition-all group"
+              >
+                <div className="flex items-start gap-3 mb-3">
+                  <div className={`p-2 rounded-lg bg-gradient-to-br ${prompt.color} shadow-sm`}>
+                    <prompt.icon className="w-4 h-4 text-white" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h4 className="font-bold text-neutral-900 group-hover:text-blue-700 text-sm">
+                      {prompt.title}
+                    </h4>
+                  </div>
+                </div>
+                <p className="text-xs text-neutral-500 line-clamp-2">
+                  {prompt.description}
+                </p>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Messages Area */}
+      <div 
+        className={`ai-hub-messages flex-1 overflow-y-auto p-6 ${dragOver ? 'bg-blue-50 border-2 border-dashed border-blue-300' : ''}`}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+      >
+        {dragOver && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-blue-500/10 backdrop-blur-sm">
+            <div className="bg-white rounded-2xl p-8 shadow-2xl text-center">
+              <Upload className="w-16 h-16 text-blue-600 mx-auto mb-4" />
+              <h3 className="text-xl font-bold text-neutral-900 mb-2">Drop files here</h3>
+              <p className="text-neutral-600">Images, documents, and more...</p>
+            </div>
+          </div>
+        )}
+        
+        <div className="space-y-6 max-w-4xl mx-auto">
+          {messages.map((message) => (
+            <div key={message.id} className={`flex gap-4 ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}>
+              {message.type === 'assistant' && (
+                <div className="flex-shrink-0">
+                  <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
+                    <Bot className="w-5 h-5 text-white" />
+                  </div>
+                </div>
+              )}
+              
+              <div className={`max-w-3xl ${message.type === 'user' ? 'order-1' : ''}`}>
+                <div className={`rounded-2xl p-4 shadow-sm ${
+                  message.type === 'user'
+                    ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white ml-auto'
+                    : 'bg-white border border-neutral-200'
+                }`}>
+                  {message.processing ? (
+                    <div className="flex items-center gap-3">
+                      <div className="flex gap-1">
+                        <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce"></div>
+                        <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></div>
+                        <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
+                      </div>
+                      <span className="text-neutral-600">{message.content}</span>
+                    </div>
+                  ) : (
+                    <div className={`prose prose-sm max-w-none ${message.type === 'user' ? 'text-white' : 'text-neutral-900'}`}>
+                      <ReactMarkdown>
+                        {message.content}
+                      </ReactMarkdown>
+                    </div>
+                  )}
+                  
+                  {/* Message attachments */}
+                  {message.attachments && (
+                    <div className="mt-3 space-y-2">
+                      {message.attachments.map((attachment, index) => (
+                        <div key={index} className="flex items-center gap-2 p-2 bg-black/10 rounded-lg">
+                          {attachment.type === 'image' ? <ImageIcon className="w-4 h-4" /> : <FileText className="w-4 h-4" />}
+                          <span className="text-sm">{attachment.name}</span>
+                          {attachment.size && <span className="text-xs opacity-75">({(attachment.size / 1024).toFixed(1)} KB)</span>}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                
+                {/* Message metadata */}
+                <div className={`flex items-center gap-3 mt-2 text-xs text-neutral-500 ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}>
+                  <span>{message.timestamp.toLocaleTimeString()}</span>
+                  {message.confidence && (
+                    <span className="flex items-center gap-1">
+                      <CheckCircle className="w-3 h-3 text-green-500" />
+                      {message.confidence}% confidence
+                    </span>
+                  )}
+                  {message.type === 'assistant' && !message.processing && (
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => speakText(message.content)}
+                        className="hover:text-blue-600 transition-colors"
+                        title="Read aloud"
+                      >
+                        <Volume2 className="w-3 h-3" />
+                      </button>
+                      <button
+                        onClick={() => copyToClipboard(message.content)}
+                        className="hover:text-blue-600 transition-colors"
+                        title="Copy message"
+                      >
+                        <Copy className="w-3 h-3" />
+                      </button>
+                    </div>
+                  )}
+                </div>
+                
+                {/* Resources */}
+                {message.resources && message.resources.length > 0 && (
+                  <div className="mt-3 p-3 bg-blue-50 rounded-xl border border-blue-200">
+                    <h4 className="text-sm font-semibold text-blue-900 mb-2">📚 Related Resources</h4>
+                    <div className="space-y-1">
+                      {message.resources.map((resource, index) => (
+                        <a
+                          key={index}
+                          href={resource}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-sm text-blue-700 hover:underline flex items-center gap-1"
+                        >
+                          <span>Resource {index + 1}</span>
+                          <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clipRule="evenodd" />
+                          </svg>
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+              
+              {message.type === 'user' && (
+                <div className="flex-shrink-0">
+                  <div className="w-10 h-10 bg-gradient-to-br from-neutral-400 to-neutral-600 rounded-xl flex items-center justify-center shadow-lg">
+                    <User className="w-5 h-5 text-white" />
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
+          
+          <div ref={messagesEndRef} />
+        </div>
+      </div>
+
+      {/* Input Area */}
+      <div className="ai-hub-input p-6 border-t border-neutral-200 bg-white">
+        <form onSubmit={handleSubmit} className="max-w-4xl mx-auto">
+          <div className="flex items-end gap-4">
+            <div className="flex-1 relative">
+              <input
+                ref={inputRef}
+                type="text"
+                value={inputText}
+                onChange={(e) => setInputText(e.target.value)}
+                placeholder="Ask me anything about teaching, lesson planning, student management..."
+                className="w-full px-6 py-4 pr-24 border border-neutral-200 rounded-2xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-300 transition-all text-lg resize-none"
+                disabled={isLoading}
+              />
+              
+              {/* Input actions */}
+              <div className="absolute right-3 top-1/2 transform -translate-y-1/2 flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="p-2 rounded-lg text-neutral-400 hover:text-blue-600 hover:bg-blue-50 transition-all"
+                  title="Upload file"
+                >
+                  <Upload className="w-5 h-5" />
+                </button>
+                
+                <button
+                  type="button"
+                  onClick={isRecording ? stopRecording : startRecording}
+                  className={`p-2 rounded-lg transition-all ${
+                    isRecording 
+                      ? 'text-red-600 bg-red-50 hover:bg-red-100' 
+                      : 'text-neutral-400 hover:text-blue-600 hover:bg-blue-50'
+                  }`}
+                  title={isRecording ? 'Stop recording' : 'Voice input'}
+                >
+                  {isRecording ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
+                </button>
+              </div>
+            </div>
+            
+            <button
+              type="submit"
+              disabled={!inputText.trim() || isLoading}
+              className="p-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-2xl hover:from-blue-700 hover:to-blue-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg hover:shadow-xl"
+              title="Send message"
+            >
+              {isLoading ? (
+                <RefreshCw className="w-6 h-6 animate-spin" />
+              ) : (
+                <Send className="w-6 h-6" />
+              )}
+            </button>
+          </div>
+          
+          {/* Status indicators */}
+          <div className="flex items-center justify-between mt-3 text-sm text-neutral-500">
+            <div className="flex items-center gap-4">
+              {isRecording && (
+                <span className="flex items-center gap-2 text-red-600">
+                  <div className="w-2 h-2 bg-red-600 rounded-full animate-pulse"></div>
+                  Recording...
+                </span>
+              )}
+              {uploading && (
+                <span className="flex items-center gap-2 text-blue-600">
+                  <RefreshCw className="w-3 h-3 animate-spin" />
+                  Uploading...
+                </span>
+              )}
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <span>Press Enter to send</span>
+              {!showQuickPrompts && (
+                <button
+                  type="button"
+                  onClick={() => setShowQuickPrompts(true)}
+                  className="text-blue-600 hover:underline"
+                >
+                  Show prompts
+                </button>
+              )}
+            </div>
+          </div>
+        </form>
+      </div>
+
+      {/* Hidden file input */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        className="hidden"
+        multiple
+        accept="image/*,.pdf,.doc,.docx,.txt,.csv,.xlsx"
+        onChange={(e) => e.target.files && handleFileUpload(e.target.files)}
+      />
+
+      {/* Settings Modal */}
+      {showSettings && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl font-bold text-neutral-900">AI Hub Settings</h3>
+              <button
+                onClick={() => setShowSettings(false)}
+                className="p-2 rounded-lg text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="space-y-6">
+              {/* Voice settings */}
+              <div>
+                <h4 className="font-semibold text-neutral-900 mb-3">Voice Settings</h4>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-neutral-700">Enable voice responses</span>
+                    <button
+                      onClick={() => setVoiceSettings(prev => ({ ...prev, enabled: !prev.enabled }))}
+                      className={`w-12 h-6 rounded-full transition-colors ${
+                        voiceSettings.enabled ? 'bg-blue-600' : 'bg-neutral-300'
+                      }`}
+                    >
+                      <div className={`w-5 h-5 bg-white rounded-full transition-transform ${
+                        voiceSettings.enabled ? 'translate-x-6' : 'translate-x-1'
+                      }`} />
+                    </button>
+                  </div>
+                  
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-neutral-700">Auto-play responses</span>
+                    <button
+                      onClick={() => setVoiceSettings(prev => ({ ...prev, autoPlay: !prev.autoPlay }))}
+                      className={`w-12 h-6 rounded-full transition-colors ${
+                        voiceSettings.autoPlay ? 'bg-blue-600' : 'bg-neutral-300'
+                      }`}
+                    >
+                      <div className={`w-5 h-5 bg-white rounded-full transition-transform ${
+                        voiceSettings.autoPlay ? 'translate-x-6' : 'translate-x-1'
+                      }`} />
+                    </button>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm text-neutral-700 mb-2">
+                      Speech speed: {voiceSettings.speed}x
+                    </label>
+                    <input
+                      type="range"
+                      min="0.5"
+                      max="2"
+                      step="0.1"
+                      value={voiceSettings.speed}
+                      onChange={(e) => setVoiceSettings(prev => ({ ...prev, speed: parseFloat(e.target.value) }))}
+                      className="w-full"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default AITeachingHub;

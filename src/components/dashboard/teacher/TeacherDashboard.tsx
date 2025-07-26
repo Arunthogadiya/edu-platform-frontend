@@ -1,7 +1,6 @@
 import React from 'react';
 import { Routes, Route } from 'react-router-dom';
 import StudentPerformance from './components/StudentPerformance';
-import PerformanceStats from './components/PerformanceStats';
 import AttendanceManagement from './components/AttendanceManagement';
 import EnhancedAttendanceSystem from './components/EnhancedAttendanceSystem';
 import Communication from './components/Communication';
@@ -12,6 +11,7 @@ import LearningResources from './components/LearningResources';
 import DashboardOverviewModern from './components/DashboardOverviewModern';
 import ActivityTracking from './components/ActivityTracking';
 import EventsManagement from './components/EventsManagement';
+import AITeachingHub from './pages/AITeachingHub';
 import { TeacherProvider } from '../../../contexts/TeacherContext';
 
 const TeacherDashboard: React.FC = () => {
@@ -20,6 +20,7 @@ const TeacherDashboard: React.FC = () => {
       <div className="w-full h-full">
         <Routes>
           <Route index element={<DashboardOverviewModern />} />
+          <Route path="ai-hub" element={<AITeachingHub />} />
           <Route path="performance" element={<StudentPerformance />} />
           <Route path="attendance" element={<EnhancedAttendanceSystem />} />
           <Route path="attendance-legacy" element={<AttendanceManagement />} />
