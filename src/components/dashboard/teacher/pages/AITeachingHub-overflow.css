@@ -1,0 +1,156 @@
+/* Message content overflow protection - Ensures content wraps without being cut off */
+.ai-hub-messages {
+  overflow-x: hidden; /* Prevent horizontal scrolling of the messages container */
+}
+
+/* Enhanced message content styling - Make text wrap properly within message bubbles */
+.ai-hub-messages .prose {
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  hyphens: auto;
+  width: 100%;
+  min-width: 0; /* Allow shrinking */
+}
+
+/* Paragraphs should wrap within the container */
+.ai-hub-messages .prose p {
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  hyphens: auto;
+  margin: 0.5rem 0;
+}
+
+/* Headers should wrap */
+.ai-hub-messages .prose h1,
+.ai-hub-messages .prose h2,
+.ai-hub-messages .prose h3,
+.ai-hub-messages .prose h4,
+.ai-hub-messages .prose h5,
+.ai-hub-messages .prose h6 {
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  hyphens: auto;
+}
+
+/* Code blocks and preformatted text - Allow horizontal scroll only within code blocks */
+.ai-hub-messages .prose pre {
+  overflow-x: auto;
+  overflow-y: hidden; 
+  width: 100%;
+  white-space: pre;
+  word-wrap: normal; /* Don't break code formatting */
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 8px;
+  padding: 1rem;
+  margin: 1rem 0;
+  box-sizing: border-box;
+}
+
+/* Inline code should wrap */
+.ai-hub-messages .prose code {
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  white-space: pre-wrap;
+  background: rgba(0, 0, 0, 0.05);
+  padding: 0.2em 0.4em;
+  border-radius: 4px;
+  font-size: 0.85em;
+}
+
+/* Inline code within paragraphs should break normally */
+.ai-hub-messages .prose p code,
+.ai-hub-messages .prose li code {
+  white-space: normal;
+  word-break: break-word;
+}
+
+/* Tables should be contained within the message bubble */
+.ai-hub-messages .prose table {
+  width: 100%;
+  max-width: 100%;
+  table-layout: auto;
+  border-collapse: collapse;
+  margin: 1rem 0;
+}
+
+.ai-hub-messages .prose table td,
+.ai-hub-messages .prose table th {
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  hyphens: auto;
+  padding: 0.5rem;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+/* Long URLs and links should break */
+.ai-hub-messages .prose a {
+  word-break: break-all;
+  overflow-wrap: break-word;
+  hyphens: auto;
+}
+
+/* Images should be responsive within messages */
+.ai-hub-messages .prose img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 8px;
+  margin: 0.5rem 0;
+}
+
+/* Lists should wrap properly */
+.ai-hub-messages .prose ul,
+.ai-hub-messages .prose ol {
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  padding-left: 1.5rem;
+}
+
+.ai-hub-messages .prose li {
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  hyphens: auto;
+  margin: 0.25rem 0;
+}
+
+/* Blockquotes should wrap */
+.ai-hub-messages .prose blockquote {
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  hyphens: auto;
+  width: 100%;
+  margin: 1rem 0;
+  padding-left: 1rem;
+  border-left: 4px solid rgba(0, 0, 0, 0.1);
+  font-style: italic;
+}
+
+/* Strong and emphasis elements */
+.ai-hub-messages .prose strong,
+.ai-hub-messages .prose em {
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+/* Ensure message container itself handles long content properly */
+.ai-hub-messages .group {
+  min-width: 0; /* Allow flex items to shrink */
+}
+
+/* Message bubble specific adjustments */
+.ai-hub-messages .group > div > div:last-child {
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  min-width: 0;
+}
+
+/* Special handling for very long words or URLs */
+.ai-hub-messages .prose * {
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+/* Ensure ReactMarkdown content doesn't overflow */
+.ai-hub-messages .prose > * {
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}

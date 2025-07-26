@@ -57,6 +57,28 @@ class AITeachingHubService {
     }
   }
 
+  // Delete session API
+  async deleteSession(sessionId: string): Promise<{ message: string }> {
+    try {
+      const response = await fetch(`${this.httpBaseUrl}/api/session/${sessionId}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP request failed: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Delete session error:', error);
+      throw error;
+    }
+  }
+
   // WebSocket connection for real-time audio
   connectWebSocket(sessionId: string, isAudio: boolean = true, audioInputOnly: boolean = false): Promise<void> {
     return new Promise((resolve, reject) => {

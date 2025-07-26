@@ -29,8 +29,10 @@ import {
   Loader2,
   Phone,
   PhoneOff,
-  Waves,
-  ExternalLink 
+  ExternalLink,
+  GraduationCap,
+  Heart,
+  RotateCcw
 } from 'lucide-react';
 import { authService } from '../../../../services/authService';
 import { aiTeachingHubService } from '../../../../services/aiTeachingHubService';
@@ -43,6 +45,7 @@ import {
   AudioPlayerWorkletNode
 } from '../../../../utils/audioUtils';
 import './AITeachingHub.css';
+import './AITeachingHub-overflow.css';
 
 // UI Components
 import StatusBar from '../../../ui/StatusBar';
@@ -77,7 +80,64 @@ const AITeachingHub: React.FC = () => {
   const [connectionStatus, setConnectionStatus] = useState<'disconnected' | 'connecting' | 'connected'>('disconnected');
   const [sessionId, setSessionId] = useState<string>('');
 
-  // Enhanced message content renderer with embedded URL support
+  const quickPrompts = [
+    {
+      category: 'planning',
+      icon: Calendar,
+      title: 'Lesson Planning',
+      text: 'Help me create a comprehensive lesson plan for my next class',
+      description: 'Generate structured lesson plans with objectives, activities, and assessments',
+      gradient: 'from-sage-400 to-sage-500',
+      bgGradient: 'from-sage-50 to-sage-100'
+    },
+    {
+      category: 'assessment',
+      icon: Target,
+      title: 'Assessment Creation',
+      text: 'Generate quiz questions and rubrics for my upcoming test',
+      description: 'Create meaningful assessments that measure student understanding',
+      gradient: 'from-academic-blue-400 to-academic-blue-500',
+      bgGradient: 'from-academic-blue-50 to-academic-blue-100'
+    },
+    {
+      category: 'engagement',
+      icon: Users,
+      title: 'Student Engagement',
+      text: 'Suggest interactive activities to boost classroom participation',
+      description: 'Discover creative ways to make learning more engaging',
+      gradient: 'from-warm-amber-400 to-warm-amber-500',
+      bgGradient: 'from-warm-amber-50 to-warm-amber-100'
+    },
+    {
+      category: 'communication',
+      icon: MessageSquare,
+      title: 'Parent Communication',
+      text: 'Help me draft a thoughtful message to parents about student progress',
+      description: 'Craft professional and caring communications',
+      gradient: 'from-gentle-purple-400 to-gentle-purple-500',
+      bgGradient: 'from-gentle-purple-50 to-gentle-purple-100'
+    },
+    {
+      category: 'resources',
+      icon: BookOpen,
+      title: 'Learning Resources',
+      text: 'Find educational materials and resources for my subject',
+      description: 'Discover curated content that enhances your teaching',
+      gradient: 'from-warm-teal-400 to-warm-teal-500',
+      bgGradient: 'from-warm-teal-50 to-warm-teal-100'
+    },
+    {
+      category: 'reflection',
+      icon: Lightbulb,
+      title: 'Teaching Reflection',
+      text: 'Help me reflect on today\'s lesson and identify areas for improvement',
+      description: 'Thoughtful analysis to enhance your teaching practice',
+      gradient: 'from-soft-rose-400 to-soft-rose-500',
+      bgGradient: 'from-soft-rose-50 to-soft-rose-100'
+    }
+  ];
+
+  // Enhanced message content renderer with thoughtful micro-interactions
   const renderMessageContent = (content: string, messageType: 'user' | 'ai') => {
     // Check if the entire message is just a URL
     const urlOnlyRegex = /^https?:\/\/[^\s]+$/;
@@ -500,9 +560,9 @@ const AITeachingHub: React.FC = () => {
               );
             } else if (part.trim()) {
               return (
-                <div key={index} className={`prose prose-sm max-w-none ${
+                <div key={index} className={`prose prose-sm w-full break-words ${
                   messageType === 'user' ? 'prose-invert' : ''
-                }`}>
+                } prose-pre:overflow-x-auto prose-pre:w-full prose-code:break-words prose-code:whitespace-pre-wrap`}>
                   <ReactMarkdown>{part}</ReactMarkdown>
                 </div>
               );
@@ -515,9 +575,10 @@ const AITeachingHub: React.FC = () => {
 
     // Regular content without URLs
     return (
-      <div className={`prose prose-sm max-w-none ${
-        messageType === 'user' ? 'prose-invert' : ''
-      }`}>
+      <div className={`prose prose-sm w-full break-words ${
+        messageType === 'user' ? 'prose-invert prose-slate' : 'prose-slate'
+      } prose-headings:font-display prose-headings:text-slate-800 prose-p:text-slate-700 prose-p:leading-relaxed
+        prose-pre:overflow-x-auto prose-pre:w-full prose-code:break-words prose-code:whitespace-pre-wrap`}>
         <ReactMarkdown>{content}</ReactMarkdown>
       </div>
     );
@@ -564,61 +625,15 @@ const AITeachingHub: React.FC = () => {
   const audioPlayerContextRef = useRef<AudioContext | null>(null);
   const micStreamRef = useRef<MediaStream | null>(null);
 
-  const quickPrompts = [
-    {
-      category: 'lesson-planning',
-      icon: Calendar,
-      text: 'Help me create a lesson plan for Mathematics Grade 8',
-      color: 'text-blue-600',
-      bg: 'bg-blue-50'
-    },
-    {
-      category: 'assessment',
-      icon: BarChart3,
-      text: 'Generate quiz questions for Science Chapter 5',
-      color: 'text-green-600',
-      bg: 'bg-green-50'
-    },
-    {
-      category: 'engagement',
-      icon: Users,
-      text: 'Suggest interactive activities for English class',
-      color: 'text-purple-600',
-      bg: 'bg-purple-50'
-    },
-    {
-      category: 'behavior',
-      icon: Target,
-      text: 'Help me address classroom behavior issues',
-      color: 'text-orange-600',
-      bg: 'bg-orange-50'
-    },
-    {
-      category: 'communication',
-      icon: MessageSquare,
-      text: 'Draft a parent communication about student progress',
-      color: 'text-pink-600',
-      bg: 'bg-pink-50'
-    },
-    {
-      category: 'resources',
-      icon: BookOpen,
-      text: 'Find educational resources for History topics',
-      color: 'text-teal-600',
-      bg: 'bg-teal-50'
-    }
-  ];
-
   const filteredPrompts = selectedCategory === 'all' 
     ? quickPrompts 
     : quickPrompts.filter(prompt => prompt.category === selectedCategory);
 
   const promptCategories = [
     { id: 'all', label: 'All', icon: Sparkles },
-    { id: 'lesson-planning', label: 'Lesson Planning', icon: Calendar },
+    { id: 'planning', label: 'Lesson Planning', icon: Calendar },
     { id: 'assessment', label: 'Assessment', icon: BarChart3 },
     { id: 'engagement', label: 'Engagement', icon: Users },
-    { id: 'behavior', label: 'Behavior', icon: Target },
     { id: 'communication', label: 'Communication', icon: MessageSquare },
     { id: 'resources', label: 'Resources', icon: BookOpen }
   ];
@@ -1211,332 +1226,686 @@ const AITeachingHub: React.FC = () => {
     setShowQuickPrompts(true);
   };
 
+  const startNewChat = async () => {
+    try {
+      // Clear current messages first
+      setMessages([]);
+      setShowQuickPrompts(true);
+      
+      // Delete the current session if it exists
+      if (sessionId) {
+        try {
+          await aiTeachingHubService.deleteSession(sessionId);
+          console.log(`Session ${sessionId} deleted successfully`);
+        } catch (error) {
+          console.error('Error deleting session:', error);
+          // Continue even if delete fails
+        }
+      }
+      
+      // Generate new session ID
+      const user = authService.getCurrentUser();
+      const newSessionId = user?.id ? 
+        `${user.id}_${Date.now()}` : 
+        `guest_${Date.now()}`;
+      
+      setSessionId(newSessionId);
+      console.log(`Started new chat with session ID: ${newSessionId}`);
+      
+    } catch (error) {
+      console.error('Error starting new chat:', error);
+    }
+  };
+
   return (
-    <div className="ai-teaching-hub h-full flex flex-col bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50">
-      {/* Header */}
-      <div className="ai-hub-header p-6 border-b border-neutral-200 bg-gradient-to-r from-blue-50 to-purple-50">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="p-3 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl shadow-lg">
-              <Bot className="w-8 h-8 text-white" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold text-neutral-900">AI Teaching Hub</h1>
-              <p className="text-neutral-600">Your intelligent teaching assistant</p>
+    <div className="ai-teaching-hub h-full flex flex-col bg-gradient-to-br from-warm-white via-sage-50/30 to-academic-blue-50/20">
+      {/* Enhanced Academic Header with Intelligent Micro-interactions */}
+      <div className="ai-hub-header px-8 py-6 bg-white/85 backdrop-blur-xl border-b border-sage-200/50">
+        <div className="flex items-center justify-between max-w-7xl mx-auto">
+          <div className="flex items-center gap-6">
+            {/* Enhanced AI Avatar with Personality */}
+            <div className="relative group">
+              <div className="p-4 bg-gradient-to-br from-sage-500 to-academic-blue-500 rounded-2xl shadow-soft
+                            group-hover:shadow-medium transition-all duration-300 group-hover:scale-105">
+                <GraduationCap className="w-8 h-8 text-white group-hover:rotate-12 transition-transform duration-300" />
+              </div>
+              {/* Simple pulse for AI activity */}
+              {isLoading && (
+                <div className="absolute -inset-1 bg-gradient-to-br from-sage-400 to-academic-blue-400 
+                              rounded-2xl animate-pulse opacity-30"></div>
+              )}
             </div>
             
-            {/* Live Mode Indicator */}
+            <div className="space-y-1">
+              <h1 className="text-2xl font-display font-semibold text-slate-800 tracking-tight 
+                           hover:text-slate-900 transition-colors duration-300">
+                AI Teaching Hub
+              </h1>
+              <p className="text-slate-600 font-medium group-hover:text-slate-700 transition-colors duration-300">
+                Your thoughtful teaching companion
+              </p>
+            </div>
+            
+            {/* Enhanced Live Mode Indicator with Better Design */}
             {isLiveMode && (
-              <div className="flex items-center gap-2 px-3 py-1 bg-red-100 text-red-600 rounded-full text-sm font-medium">
-                <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
-                <span>Live</span>
-                <Waves className="w-4 h-4" />
+              <div className="flex items-center gap-3 px-5 py-3 bg-gradient-to-r from-warm-amber-50/90 to-warm-amber-100/90 
+                            backdrop-blur-sm border border-warm-amber-200/50 rounded-full shadow-soft animate-slide-in">
+                <div className="relative">
+                  <div className="w-2.5 h-2.5 bg-warm-amber-500 rounded-full animate-heartbeat"></div>
+                  <div className="absolute inset-0 w-2.5 h-2.5 bg-warm-amber-400 rounded-full animate-ping opacity-40"></div>
+                </div>
+                <span className="text-sm font-medium text-warm-amber-700">Live Conversation</span>
+                <div className="flex gap-0.5">
+                  <div className="w-1 h-2 bg-warm-amber-500 rounded-full animate-wave"></div>
+                  <div className="w-1 h-3 bg-warm-amber-500 rounded-full animate-wave" style={{animationDelay: '0.1s'}}></div>
+                  <div className="w-1 h-2 bg-warm-amber-500 rounded-full animate-wave" style={{animationDelay: '0.2s'}}></div>
+                </div>
               </div>
             )}
           </div>
           
+          {/* Enhanced Control Panel with Better Micro-interactions */}
           <div className="flex items-center gap-3">
-            {/* Live Conversation Toggle */}
+            {/* Live Conversation Toggle with Enhanced Feedback */}
             <button
               onClick={isLiveMode ? stopLiveConversation : startLiveConversation}
               disabled={isConnecting}
-              className={`p-3 rounded-xl transition-all duration-300 ${
+              className={`group relative p-3 rounded-xl transition-all duration-300 shadow-soft hover:shadow-medium 
+                        overflow-hidden ${
                 isLiveMode 
-                  ? 'bg-red-100 text-red-600 hover:bg-red-200' 
-                  : 'bg-green-100 text-green-600 hover:bg-green-200'
-              }`}
+                  ? 'bg-gradient-to-br from-warm-amber-100 to-warm-amber-200 text-warm-amber-700 hover:from-warm-amber-200 hover:to-warm-amber-300' 
+                  : 'bg-white/70 text-sage-600 hover:bg-sage-50 hover:text-sage-700'
+              } hover:scale-110`}
               title={isLiveMode ? "End Live Conversation" : "Start Live Conversation"}
             >
               {isConnecting ? (
-                <Loader2 className="w-5 h-5 animate-spin" />
+                <div className="relative">
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  <div className="absolute inset-0 bg-sage-400/20 rounded-full animate-pulse-gentle"></div>
+                </div>
               ) : isLiveMode ? (
-                <PhoneOff className="w-5 h-5" />
+                <div className="relative">
+                  <PhoneOff className="w-5 h-5 group-hover:rotate-12 transition-transform duration-300" />
+                  {/* Active state pulse */}
+                  <div className="absolute inset-0 bg-warm-amber-400/20 rounded-xl animate-pulse-gentle"></div>
+                </div>
               ) : (
-                <Phone className="w-5 h-5" />
+                <>
+                  <Phone className="w-5 h-5 group-hover:scale-110 transition-transform duration-300" />
+                  {/* Shine effect on hover */}
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent 
+                                -translate-x-full group-hover:translate-x-full transition-transform duration-500"></div>
+                </>
               )}
             </button>
 
+            {/* Enhanced Teaching Prompts Button */}
             <button
               onClick={() => setShowQuickPrompts(!showQuickPrompts)}
-              className={`p-3 rounded-xl transition-all duration-300 ${
+              className={`group relative p-3 rounded-xl transition-all duration-300 shadow-soft hover:shadow-medium 
+                        overflow-hidden hover:scale-110 ${
                 showQuickPrompts 
-                  ? 'bg-blue-100 text-blue-600' 
-                  : 'bg-white text-neutral-600 hover:bg-neutral-50'
+                  ? 'bg-gradient-to-br from-sage-100 to-sage-200 text-sage-700' 
+                  : 'bg-white/70 text-slate-600 hover:bg-slate-100 hover:text-slate-700'
               }`}
-              title="Toggle Quick Prompts (Ctrl+K)"
+              title="Quick Teaching Prompts"
             >
-              <Lightbulb className="w-5 h-5" />
+              <Lightbulb className={`w-5 h-5 transition-all duration-300 ${
+                showQuickPrompts ? 'rotate-12 scale-110' : 'group-hover:scale-110'
+              }`} />
+              {/* Shine effect on hover */}
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent 
+                            -translate-x-full group-hover:translate-x-full transition-transform duration-500"></div>
             </button>
             
+            {/* Enhanced Voice Settings Button */}
             <button
               onClick={() => isSpeaking ? stopSpeaking() : setVoiceSettings(prev => ({ ...prev, enabled: !prev.enabled }))}
-              className={`p-3 rounded-xl transition-all duration-300 ${
+              className={`group relative p-3 rounded-xl transition-all duration-300 shadow-soft hover:shadow-medium 
+                        overflow-hidden hover:scale-110 ${
                 voiceSettings.enabled 
-                  ? 'bg-green-100 text-green-600' 
-                  : 'bg-white text-neutral-600 hover:bg-neutral-50'
+                  ? 'bg-gradient-to-br from-academic-blue-100 to-academic-blue-200 text-academic-blue-700' 
+                  : 'bg-white/70 text-slate-600 hover:bg-slate-100 hover:text-slate-700'
               }`}
-              title={isSpeaking ? "Stop Speaking" : "Toggle Voice"}
+              title={isSpeaking ? "Stop Speaking" : "Voice Settings"}
             >
-              {isSpeaking ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
+              {isSpeaking ? (
+                <div className="relative">
+                  <VolumeX className="w-5 h-5 animate-pulse" />
+                  {/* Speaking indicator waves */}
+                  <div className="absolute -right-1 -top-1 flex gap-0.5">
+                    <div className="w-0.5 h-2 bg-academic-blue-500 rounded-full animate-wave"></div>
+                    <div className="w-0.5 h-3 bg-academic-blue-500 rounded-full animate-wave" style={{animationDelay: '0.1s'}}></div>
+                    <div className="w-0.5 h-2 bg-academic-blue-500 rounded-full animate-wave" style={{animationDelay: '0.2s'}}></div>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <Volume2 className="w-5 h-5 group-hover:scale-110 transition-transform duration-300" />
+                  {/* Shine effect on hover */}
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent 
+                                -translate-x-full group-hover:translate-x-full transition-transform duration-500"></div>
+                </>
+              )}
             </button>
-            
+                        
+            {/* Start New Chat Button */}
             <button
-              onClick={clearChat}
-              className="p-3 bg-white text-neutral-600 hover:bg-neutral-50 rounded-xl transition-all duration-300"
-              title="Clear Chat"
+              onClick={startNewChat}
+              className="group relative p-3 rounded-xl bg-white/70 text-sage-600 hover:bg-sage-50 hover:text-sage-700 
+                       transition-all duration-300 shadow-soft hover:shadow-medium hover:scale-110 overflow-hidden"
+              title="Start New Chat"
             >
-              <Trash2 className="w-5 h-5" />
+              <RotateCcw className="w-5 h-5 group-hover:scale-110 group-hover:rotate-180 transition-all duration-300" />
+              {/* Shine effect on hover */}
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent 
+                            -translate-x-full group-hover:translate-x-full transition-transform duration-500"></div>
             </button>
             
+            {/* Enhanced Settings Button */}
             <button
               onClick={() => setShowSettings(true)}
-              className="p-3 bg-white text-neutral-600 hover:bg-neutral-50 rounded-xl transition-all duration-300"
-              title="Settings (Ctrl+Shift+S)"
+              className="group relative p-3 rounded-xl bg-white/70 text-slate-600 hover:bg-slate-50 hover:text-slate-700 
+                       transition-all duration-300 shadow-soft hover:shadow-medium hover:scale-110 overflow-hidden"
+              title="Settings"
             >
-              <Settings className="w-5 h-5" />
+              <Settings className="w-5 h-5 group-hover:rotate-90 group-hover:scale-110 transition-all duration-300" />
+              {/* Shine effect on hover */}
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent 
+                            -translate-x-full group-hover:translate-x-full transition-transform duration-500"></div>
             </button>
           </div>
         </div>
       </div>
 
-      {/* Quick Prompts */}
+      {/* Elegant Quick Prompts Panel */}
       {showQuickPrompts && (
-        <div className="ai-hub-prompts p-6 border-b border-neutral-200 bg-white">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-semibold text-neutral-800">Quick Prompts</h3>
-            <div className="flex items-center gap-2">
-              <Filter className="w-4 h-4 text-neutral-500" />
-              <select
-                value={selectedCategory}
-                onChange={(e) => setSelectedCategory(e.target.value)}
-                className="text-sm border border-neutral-200 rounded-lg px-3 py-1 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-300"
-              >
-                {promptCategories.map((category) => (
-                  <option key={category.id} value={category.id}>
-                    {category.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-            {filteredPrompts.map((prompt, index) => (
+        <div className="ai-hub-prompts px-8 py-6 bg-white/60 backdrop-blur-md border-b border-sage-200/30">
+          <div className="max-w-7xl mx-auto">
+            <div className="flex items-center justify-between mb-6 animate-slide-down">
+              <div className="space-y-1">
+                <h3 className="text-lg font-display font-semibold text-slate-800 flex items-center gap-2">
+                  <div className="w-2 h-2 bg-sage-400 rounded-full animate-pulse-gentle"></div>
+                  Teaching Companions
+                </h3>
+                <p className="text-slate-600 text-sm">Thoughtfully crafted prompts for every teaching moment</p>
+              </div>
+              
               <button
-                key={index}
-                onClick={() => handleQuickPrompt(prompt.text)}
-                className={`${prompt.bg} ${prompt.color} p-4 rounded-xl text-left hover:shadow-md transition-all duration-300 border border-transparent hover:border-current/20`}
+                onClick={() => setShowQuickPrompts(false)}
+                className="p-2 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100/50 
+                         transition-all duration-300 hover:rotate-90 hover:scale-110"
+                title="Close teaching companions"
               >
-                <div className="flex items-start gap-3">
-                  <prompt.icon className="w-5 h-5 mt-0.5 flex-shrink-0" />
-                  <span className="text-sm font-medium leading-tight">{prompt.text}</span>
-                </div>
+                <X className="w-5 h-5" />
               </button>
-            ))}
+            </div>
+            
+            {/* Enhanced Grid Layout with Staggered Animation */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {quickPrompts.map((prompt, index) => (
+                <button
+                  key={index}
+                  onClick={() => handleQuickPrompt(prompt.text)}
+                  className={`group relative p-6 rounded-2xl bg-gradient-to-br ${prompt.bgGradient} 
+                           border border-white/50 shadow-soft hover:shadow-medium transition-all duration-500 
+                           hover:-translate-y-2 text-left overflow-hidden transform hover:scale-[1.02]
+                           animate-slide-up opacity-0`}
+                  style={{ 
+                    animationDelay: `${index * 100}ms`,
+                    animationFillMode: 'forwards'
+                  }}
+                >
+                  {/* Apple-style shine effect */}
+                  <div className="absolute inset-0 bg-gradient-to-br from-white/30 via-white/10 to-transparent 
+                                opacity-0 group-hover:opacity-100 transition-all duration-500 
+                                transform translate-y-full group-hover:translate-y-0"></div>
+                  
+                  {/* Gentle ripple effect on hover */}
+                  <div className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-20 
+                                bg-radial-gradient from-white via-transparent to-transparent 
+                                animate-ripple"></div>
+                  
+                  <div className="relative z-10">
+                    <div className="flex items-start gap-4 mb-4">
+                      <div className={`p-3 rounded-xl bg-gradient-to-br ${prompt.gradient} shadow-soft
+                                     group-hover:shadow-medium transition-all duration-300 
+                                     group-hover:scale-110 group-hover:rotate-3`}>
+                        <prompt.icon className="w-5 h-5 text-white" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-display font-semibold text-slate-800 group-hover:text-slate-900 
+                                     text-sm mb-2 transition-colors duration-300">
+                          {prompt.title}
+                        </h4>
+                        <p className="text-xs text-slate-600 group-hover:text-slate-700 line-clamp-2 
+                                   leading-relaxed transition-colors duration-300">
+                          {prompt.description}
+                        </p>
+                      </div>
+                    </div>
+                    
+                    {/* Apple-style arrow with smooth transition */}
+                    <div className="flex justify-end">
+                      <div className="w-8 h-8 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center
+                                    opacity-0 group-hover:opacity-100 transition-all duration-300 
+                                    transform translate-x-2 group-hover:translate-x-0 group-hover:scale-110">
+                        <svg className="w-4 h-4 text-slate-700 transition-transform duration-300 group-hover:translate-x-0.5" 
+                             fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                      </div>
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       )}
 
-      {/* Messages */}
+      {/* Enhanced Conversation Area with Thoughtful Message Flow */}
       <div
-        className={`ai-hub-messages flex-1 overflow-y-auto p-6 ${dragOver ? 'bg-blue-50 border-2 border-dashed border-blue-300' : ''}`}
+        className={`ai-hub-messages flex-1 overflow-y-auto px-8 py-6 transition-all duration-500 ${
+          dragOver 
+            ? 'bg-gradient-to-br from-sage-50 to-academic-blue-50 border-2 border-dashed border-sage-300 scale-[0.99]' 
+            : ''
+        }`}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
       >
-        {messages.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full text-center">
-            <div className="p-6 bg-gradient-to-br from-blue-500 to-purple-600 rounded-3xl shadow-lg mb-6">
-              <Bot className="w-16 h-16 text-white" />
-            </div>
-            <h2 className="text-2xl font-bold text-neutral-800 mb-3">Welcome to AI Teaching Hub</h2>
-            <p className="text-neutral-600 max-w-md mb-6">
-              Your intelligent teaching assistant is ready to help with lesson planning, assessments, 
-              student engagement, and more. Start a conversation or choose a quick prompt above.
-            </p>
-            <div className="flex flex-wrap gap-3 justify-center">
-              <span className="inline-flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-600 rounded-full text-sm font-medium">
-                <MessageSquare className="w-4 h-4" />
-                Text Messages
-              </span>
-              <span className="inline-flex items-center gap-2 px-4 py-2 bg-green-50 text-green-600 rounded-full text-sm font-medium">
-                <Mic className="w-4 h-4" />
-                Voice Input
-              </span>
-              <span className="inline-flex items-center gap-2 px-4 py-2 bg-purple-50 text-purple-600 rounded-full text-sm font-medium">
-                <ImageIcon className="w-4 h-4" />
-                Image Analysis
-              </span>
-            </div>
-          </div>
-        ) : (
-          <div className="space-y-6 max-w-4xl mx-auto">
-            {messages.map((message) => (
-              <div key={message.id} className={`flex gap-4 ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}>
-                <div className={`flex gap-3 max-w-[80%] ${message.type === 'user' ? 'flex-row-reverse' : ''}`}>
-                  <div className={`w-10 h-10 rounded-2xl flex items-center justify-center flex-shrink-0 ${
-                    message.type === 'user' 
-                      ? 'bg-gradient-to-br from-blue-500 to-blue-600 text-white' 
-                      : 'bg-gradient-to-br from-purple-500 to-purple-600 text-white'
-                  }`}>
-                    {message.type === 'user' ? <User className="w-5 h-5" /> : <Bot className="w-5 h-5" />}
-                  </div>
-                  
-                  <div className={`rounded-2xl p-4 ${
-                    message.type === 'user'
-                      ? 'bg-gradient-to-br from-blue-500 to-blue-600 text-white'
-                      : 'bg-white border border-neutral-200 shadow-sm'
-                  }`}>
-                    {message.processing ? (
-                      <div className="flex items-center gap-2">
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        <span className="text-neutral-600">Processing...</span>
-                      </div>
-                    ) : (
-                      <>
-                        {renderMessageContent(message.content, message.type)}
-                        
-                        {message.attachments && (
-                          <div className="mt-3 space-y-2">
-                            {message.attachments.map((attachment, idx) => (
-                              <div key={idx} className="flex items-center gap-2 p-2 bg-neutral-50 rounded-lg">
-                                {attachment.type === 'image' ? (
-                                  <img 
-                                    src={attachment.url} 
-                                    alt={attachment.name}
-                                    className="w-20 h-20 object-cover rounded-lg"
-                                  />
-                                ) : (
-                                  <FileText className="w-5 h-5 text-neutral-400" />
-                                )}
-                                <div className="flex-1 min-w-0">
-                                  <p className="text-sm font-medium text-neutral-900 truncate">{attachment.name}</p>
-                                  <p className="text-xs text-neutral-500">{(attachment.size / 1024).toFixed(1)} KB</p>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                        
-                        {message.type === 'ai' && !message.processing && (
-                          <div className="flex items-center gap-2 mt-3 pt-3 border-t border-neutral-100">
-                            <button
-                              onClick={() => copyToClipboard(message.content)}
-                              className="p-1.5 text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 rounded-lg transition-colors"
-                              title="Copy response"
-                            >
-                              <Copy className="w-4 h-4" />
-                            </button>
-                            <button
-                              onClick={() => speakText(message.content)}
-                              className="p-1.5 text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 rounded-lg transition-colors"
-                              title="Read aloud"
-                            >
-                              <Volume2 className="w-4 h-4" />
-                            </button>
-                            <button
-                              className="p-1.5 text-neutral-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"
-                              title="Good response"
-                            >
-                              <ThumbsUp className="w-4 h-4" />
-                            </button>
-                            <button
-                              className="p-1.5 text-neutral-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                              title="Needs improvement"
-                            >
-                              <ThumbsDown className="w-4 h-4" />
-                            </button>
-                          </div>
-                        )}
-                      </>
-                    )}
-                  </div>
+        {/* Enhanced drag overlay with Apple-style feedback */}
+        {dragOver && (
+          <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none">
+            <div className="bg-white/90 backdrop-blur-lg rounded-3xl p-8 shadow-large border border-sage-200/50
+                          animate-scale-in">
+              <div className="text-center space-y-4">
+                <div className="w-16 h-16 mx-auto bg-gradient-to-br from-sage-400 to-academic-blue-400 
+                              rounded-2xl flex items-center justify-center animate-bounce-gentle">
+                  <Upload className="w-8 h-8 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-display font-semibold text-slate-800 mb-1">Drop your files here</h3>
+                  <p className="text-sm text-slate-600">I'll analyze them thoughtfully</p>
                 </div>
               </div>
-            ))}
-            <div ref={messagesEndRef} />
+            </div>
           </div>
         )}
-      </div>
 
-      {/* Input Area */}
-      <div className="ai-hub-input p-6 border-t border-neutral-200 bg-white">
-        {/* Live Mode Controls */}
-        {isLiveMode && (
-          <div className="mb-4 p-4 bg-gradient-to-r from-red-50 to-pink-50 border border-red-200 rounded-xl">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
-                <span className="font-medium text-red-800">Live Conversation Active</span>
+        <div className="max-w-4xl mx-auto">
+          {messages.length === 0 ? (
+            /* Enhanced Welcome Screen with Warm Micro-interactions */
+            <div className="flex flex-col items-center justify-center h-full text-center py-16 animate-fade-in">
+              <div className="relative mb-8 group">
+                <div className="p-8 bg-gradient-to-br from-sage-500 to-academic-blue-500 rounded-3xl shadow-large
+                              group-hover:shadow-xl transition-all duration-500 group-hover:scale-105">
+                  <GraduationCap className="w-16 h-16 text-white animate-float" />
+                </div>
+                {/* Gentle pulse ring */}
+                <div className="absolute inset-0 bg-gradient-to-br from-sage-400 to-academic-blue-400 
+                              rounded-3xl animate-pulse-gentle opacity-30 scale-110"></div>
+                {/* Floating companion heart */}
+                <div className="absolute -top-2 -right-2 w-8 h-8 bg-gradient-to-br from-warm-amber-400 to-warm-amber-500 
+                              rounded-full animate-float shadow-soft flex items-center justify-center
+                              group-hover:scale-110 transition-transform duration-300">
+                  <Heart className="w-4 h-4 text-white" />
+                </div>
               </div>
-              <button
-                onClick={stopLiveConversation}
-                className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
-              >
-                End Conversation
-              </button>
+              
+              <div className="space-y-6 max-w-2xl animate-slide-up" style={{ animationDelay: '200ms' }}>
+                <h2 className="text-3xl font-display font-semibold text-slate-800 tracking-tight">
+                  Welcome to Your Teaching Companion
+                </h2>
+                <p className="text-lg text-slate-600 leading-relaxed">
+                  I'm here to support your teaching journey with thoughtful insights, 
+                  creative lesson ideas, and gentle guidance whenever you need it.
+                </p>
+              </div>
+              
+              {/* Enhanced Feature Highlights with Micro-interactions */}
+              <div className="flex flex-wrap gap-6 justify-center mt-8 animate-slide-up" 
+                   style={{ animationDelay: '400ms' }}>
+                <div className="group flex items-center gap-3 px-5 py-3 bg-white/60 backdrop-blur-sm 
+                              rounded-full shadow-soft hover:shadow-medium transition-all duration-300 
+                              hover:scale-105 hover:bg-white/80">
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-sage-400 to-sage-500 
+                                flex items-center justify-center group-hover:rotate-12 transition-transform duration-300">
+                    <MessageSquare className="w-4 h-4 text-white" />
+                  </div>
+                  <span className="text-sm font-medium text-slate-700 group-hover:text-slate-800">
+                    Thoughtful Conversations
+                  </span>
+                </div>
+                <div className="group flex items-center gap-3 px-5 py-3 bg-white/60 backdrop-blur-sm 
+                              rounded-full shadow-soft hover:shadow-medium transition-all duration-300 
+                              hover:scale-105 hover:bg-white/80">
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-academic-blue-400 to-academic-blue-500 
+                                flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                    <Mic className="w-4 h-4 text-white" />
+                  </div>
+                  <span className="text-sm font-medium text-slate-700 group-hover:text-slate-800">
+                    Voice Interactions
+                  </span>
+                </div>
+                <div className="group flex items-center gap-3 px-5 py-3 bg-white/60 backdrop-blur-sm 
+                              rounded-full shadow-soft hover:shadow-medium transition-all duration-300 
+                              hover:scale-105 hover:bg-white/80">
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-warm-amber-400 to-warm-amber-500 
+                                flex items-center justify-center group-hover:rotate-12 transition-transform duration-300">
+                    <ImageIcon className="w-4 h-4 text-white" />
+                  </div>
+                  <span className="text-sm font-medium text-slate-700 group-hover:text-slate-800">
+                    Document Analysis
+                  </span>
+                </div>
+              </div>
             </div>
-            <p className="text-sm text-red-600 mt-2">
-              Speak naturally - your voice is being processed in real-time
-            </p>
-          </div>
-        )}
-
-        {/* Uploaded Images Preview */}
-        {uploadedImages.length > 0 && (
-          <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-xl">
-            <div className="flex items-center gap-2 mb-3">
-              <ImageIcon className="w-4 h-4 text-blue-600" />
-              <span className="font-medium text-blue-800">
-                {uploadedImages.length} image{uploadedImages.length > 1 ? 's' : ''} uploaded
-              </span>
-            </div>
-            <div className="flex flex-wrap gap-3">
-              {uploadedImages.map((image) => (
-                <div key={image.id} className="relative group">
-                  <img
-                    src={image.url}
-                    alt={image.file.name}
-                    className="w-20 h-20 object-cover rounded-lg border border-blue-200"
-                  />
-                  <button
-                    onClick={() => removeUploadedImage(image.id)}
-                    className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full 
-                             opacity-0 group-hover:opacity-100 transition-opacity duration-200
-                             flex items-center justify-center hover:bg-red-600"
-                    title="Remove image"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                  <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-xs 
-                                px-1 py-0.5 rounded-b-lg truncate">
-                    {image.file.name}
+          ) : (
+            /* Enhanced Message Thread with Thoughtful Flow */
+            <div className="space-y-8">
+              {messages.map((message, index) => (
+                <div 
+                  key={message.id} 
+                  className={`flex gap-4 animate-message-slide-in ${
+                    message.type === 'user' ? 'justify-end' : 'justify-start'
+                  }`}
+                  style={{ 
+                    animationDelay: `${index * 100}ms`,
+                    animationFillMode: 'backwards'
+                  }}
+                >
+                  <div className={`flex gap-4 max-w-[80%] ${
+                    message.type === 'user' ? 'flex-row-reverse' : ''
+                  }`}>
+                    {/* Enhanced Avatar with Personality */}
+                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 
+                                   shadow-soft transition-all duration-300 hover:shadow-medium hover:scale-105 ${
+                      message.type === 'user' 
+                        ? 'bg-gradient-to-br from-slate-500 to-slate-600 text-white hover:from-slate-600 hover:to-slate-700' 
+                        : 'bg-gradient-to-br from-sage-500 to-academic-blue-500 text-white hover:from-sage-600 hover:to-academic-blue-600'
+                    }`}>
+                      {message.type === 'user' ? (
+                        <User className="w-6 h-6" />
+                      ) : (
+                        <GraduationCap className="w-6 h-6" />
+                      )}
+                      {/* Simple pulse for AI thinking */}
+                      {message.processing && message.type === 'ai' && (
+                        <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-sage-400 to-academic-blue-400 
+                                      animate-pulse opacity-40"></div>
+                      )}
+                    </div>
+                    
+                    {/* Enhanced Message Card with Paper-like Feel */}
+                    <div className={`rounded-2xl px-6 py-5 shadow-soft backdrop-blur-sm transition-all duration-500 
+                                   hover:shadow-medium group break-words ${
+                      message.type === 'user'
+                        ? 'bg-gradient-to-br from-slate-600 to-slate-700 text-white hover:from-slate-700 hover:to-slate-800'
+                        : 'bg-white/85 border border-sage-200/30 text-slate-800 hover:bg-white/95 hover:border-sage-300/50'
+                    }`}>
+                      {message.processing ? (
+                        /* Simple Thinking Indicator */
+                        <div className="flex items-center gap-3 py-2">
+                          <div className="flex gap-1">
+                            <div className="w-2 h-2 bg-sage-500 rounded-full animate-pulse"></div>
+                            <div className="w-2 h-2 bg-sage-500 rounded-full animate-pulse" 
+                                 style={{animationDelay: '0.2s'}}></div>
+                            <div className="w-2 h-2 bg-sage-500 rounded-full animate-pulse" 
+                                 style={{animationDelay: '0.4s'}}></div>
+                          </div>
+                          <span className="text-slate-600 text-sm">
+                            Agent is thinking...
+                          </span>
+                        </div>
+                      ) : (
+                        <>
+                          {/* Direct message content without typing animation */}
+                          <div className="w-full">
+                            {renderMessageContent(message.content, message.type)}
+                          </div>
+                          
+                          {/* Enhanced Attachment Preview */}
+                          {message.attachments && (
+                            <div className="mt-5 space-y-3">
+                              {message.attachments.map((attachment, idx) => (
+                                <div key={idx} className="group flex items-center gap-4 p-4 bg-slate-50/60 backdrop-blur-sm 
+                                                        rounded-xl border border-slate-200/30 hover:border-slate-300/50 
+                                                        transition-all duration-300 hover:bg-slate-50/80">
+                                  {attachment.type === 'image' ? (
+                                    <div className="relative overflow-hidden rounded-lg">
+                                      <img 
+                                        src={attachment.url} 
+                                        alt={attachment.name}
+                                        className="w-20 h-20 object-cover shadow-soft group-hover:scale-105 
+                                                 transition-transform duration-300"
+                                      />
+                                      <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent 
+                                                    opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                                    </div>
+                                  ) : (
+                                    <div className="w-12 h-12 bg-gradient-to-br from-academic-blue-400 to-academic-blue-500 
+                                                  rounded-xl flex items-center justify-center shadow-soft">
+                                      <FileText className="w-6 h-6 text-white" />
+                                    </div>
+                                  )}
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-medium text-slate-800 truncate group-hover:text-slate-900">
+                                      {attachment.name}
+                                    </p>
+                                    <p className="text-xs text-slate-500 group-hover:text-slate-600">
+                                      {(attachment.size / 1024).toFixed(1)} KB
+                                    </p>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                          
+                          {/* Enhanced Message Actions with Micro-interactions */}
+                          {message.type === 'ai' && !message.processing && (
+                            <div className="flex items-center gap-2 mt-5 pt-4 border-t border-slate-200/20 
+                                          opacity-0 group-hover:opacity-100 transition-all duration-300">
+                              <button
+                                onClick={() => copyToClipboard(message.content)}
+                                className="group/btn p-2.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100/50 
+                                         rounded-xl transition-all duration-200 hover:scale-110"
+                                title="Copy response"
+                              >
+                                <Copy className="w-4 h-4 group-hover/btn:scale-110 transition-transform duration-200" />
+                              </button>
+                              <button
+                                onClick={() => speakText(message.content)}
+                                className="group/btn p-2.5 text-slate-400 hover:text-academic-blue-600 hover:bg-academic-blue-50 
+                                         rounded-xl transition-all duration-200 hover:scale-110"
+                                title="Read aloud"
+                              >
+                                <Volume2 className="w-4 h-4 group-hover/btn:scale-110 transition-transform duration-200" />
+                              </button>
+                              <button
+                                className="group/btn p-2.5 text-slate-400 hover:text-sage-600 hover:bg-sage-50 
+                                         rounded-xl transition-all duration-200 hover:scale-110"
+                                title="Helpful response"
+                              >
+                                <ThumbsUp className="w-4 h-4 group-hover/btn:scale-110 transition-transform duration-200" />
+                              </button>
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </div>
                   </div>
                 </div>
               ))}
+              <div ref={messagesEndRef} />
             </div>
-            <p className="text-sm text-blue-600 mt-2">
-              Add a prompt below to describe what you want me to do with {uploadedImages.length > 1 ? 'these images' : 'this image'}.
-            </p>
+          )}
+        </div>
+      </div>
+
+      {/* Enhanced Input Area - Floating Academic Design */}
+      <div className="ai-hub-input px-8 py-6 bg-white/80 backdrop-blur-xl border-t border-sage-200/50">
+        {/* Enhanced Live Mode Indicator with Apple-style Design */}
+        {isLiveMode && (
+          <div className="max-w-4xl mx-auto mb-6 animate-slide-down">
+            <div className="p-6 bg-gradient-to-r from-warm-amber-50/90 to-warm-amber-100/90 backdrop-blur-sm
+                          border border-warm-amber-200/50 rounded-2xl shadow-soft hover:shadow-medium 
+                          transition-all duration-300">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  {/* Enhanced live indicator with multiple rings */}
+                  <div className="relative">
+                    <div className="w-4 h-4 bg-warm-amber-500 rounded-full animate-heartbeat"></div>
+                    <div className="absolute inset-0 w-4 h-4 bg-warm-amber-400 rounded-full animate-ping opacity-40"></div>
+                    <div className="absolute -inset-1 w-6 h-6 bg-warm-amber-300 rounded-full animate-pulse-gentle opacity-20"></div>
+                  </div>
+                  
+                  <div className="space-y-1">
+                    <h4 className="font-display font-semibold text-warm-amber-800 flex items-center gap-2">
+                      Live conversation is active
+                      <div className="flex gap-1">
+                        <div className="w-1 h-3 bg-warm-amber-500 rounded-full animate-wave"></div>
+                        <div className="w-1 h-4 bg-warm-amber-500 rounded-full animate-wave" style={{animationDelay: '0.1s'}}></div>
+                        <div className="w-1 h-2 bg-warm-amber-500 rounded-full animate-wave" style={{animationDelay: '0.2s'}}></div>
+                        <div className="w-1 h-4 bg-warm-amber-500 rounded-full animate-wave" style={{animationDelay: '0.3s'}}></div>
+                        <div className="w-1 h-3 bg-warm-amber-500 rounded-full animate-wave" style={{animationDelay: '0.4s'}}></div>
+                      </div>
+                    </h4>
+                    <p className="text-sm text-warm-amber-700">
+                      Speak naturally - I'm listening and will respond thoughtfully
+                    </p>
+                  </div>
+                </div>
+                
+                {/* Enhanced end conversation button */}
+                <button
+                  onClick={stopLiveConversation}
+                  className="group px-6 py-3 bg-gradient-to-br from-warm-amber-500 to-warm-amber-600 
+                           hover:from-warm-amber-600 hover:to-warm-amber-700 text-white rounded-xl 
+                           transition-all duration-300 shadow-soft hover:shadow-medium
+                           hover:scale-105 hover:-translate-y-0.5 flex items-center gap-2"
+                >
+                  <PhoneOff className="w-4 h-4 group-hover:rotate-12 transition-transform duration-300" />
+                  <span className="font-medium">End Conversation</span>
+                </button>
+              </div>
+              
+              {/* Connection quality indicator */}
+              <div className="mt-4 flex items-center gap-2 text-xs text-warm-amber-700">
+                <div className="flex gap-1">
+                  <div className="w-2 h-2 bg-warm-amber-500 rounded-full"></div>
+                  <div className="w-2 h-2 bg-warm-amber-500 rounded-full"></div>
+                  <div className="w-2 h-2 bg-warm-amber-400 rounded-full animate-pulse"></div>
+                </div>
+                <span>Excellent connection quality</span>
+              </div>
+            </div>
           </div>
         )}
 
+        {/* Enhanced Image Upload Preview with Apple-style Design */}
+        {uploadedImages.length > 0 && (
+          <div className="max-w-4xl mx-auto mb-6 animate-slide-up">
+            <div className="p-6 bg-gradient-to-br from-academic-blue-50/80 to-white/60 backdrop-blur-sm 
+                          border border-academic-blue-200/30 rounded-2xl shadow-soft hover:shadow-medium 
+                          transition-all duration-300">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-8 h-8 bg-gradient-to-br from-academic-blue-400 to-academic-blue-500 
+                              rounded-xl flex items-center justify-center shadow-soft">
+                  <ImageIcon className="w-4 h-4 text-white" />
+                </div>
+                <div className="flex-1">
+                  <h4 className="font-display font-semibold text-academic-blue-800 text-sm">
+                    {uploadedImages.length} image{uploadedImages.length > 1 ? 's' : ''} ready for analysis
+                  </h4>
+                  <p className="text-xs text-academic-blue-600">
+                    I'll analyze {uploadedImages.length > 1 ? 'these images' : 'this image'} together with your question
+                  </p>
+                </div>
+              </div>
+              
+              {/* Enhanced Image Grid */}
+              <div className="flex flex-wrap gap-4">
+                {uploadedImages.map((image, index) => (
+                  <div key={image.id} className="group relative animate-scale-in" 
+                       style={{ animationDelay: `${index * 100}ms` }}>
+                    <div className="relative overflow-hidden rounded-xl border-2 border-academic-blue-200/30 
+                                  shadow-soft group-hover:shadow-medium transition-all duration-300 
+                                  group-hover:scale-105">
+                      <img
+                        src={image.url}
+                        alt={image.file.name}
+                        className="w-24 h-24 object-cover transition-transform duration-300 group-hover:scale-110"
+                      />
+                      {/* Gradient overlay on hover */}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-black/10 
+                                    opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                      
+                      {/* Enhanced remove button */}
+                      <button
+                        onClick={() => removeUploadedImage(image.id)}
+                        className="absolute -top-2 -right-2 w-7 h-7 bg-slate-500 hover:bg-slate-600 text-white 
+                                 rounded-full opacity-0 group-hover:opacity-100 transition-all duration-200
+                                 flex items-center justify-center shadow-medium hover:scale-110 
+                                 hover:rotate-90 backdrop-blur-sm"
+                        title="Remove image"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                      
+                      {/* File info on hover */}
+                      <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/60 to-transparent
+                                    transform translate-y-full group-hover:translate-y-0 transition-transform duration-300">
+                        <p className="text-xs text-white truncate font-medium">{image.file.name}</p>
+                      </div>
+                    </div>
+                    
+                    {/* Processing indicator */}
+                    {uploading && (
+                      <div className="absolute inset-0 bg-white/80 backdrop-blur-sm rounded-xl 
+                                    flex items-center justify-center">
+                        <div className="text-center">
+                          <Loader2 className="w-5 h-5 animate-spin text-academic-blue-500 mx-auto mb-1" />
+                          <p className="text-xs text-academic-blue-600">Processing...</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+              
+              {/* Helpful hint */}
+              <div className="mt-4 p-3 bg-white/50 backdrop-blur-sm rounded-lg border border-academic-blue-200/20">
+                <p className="text-xs text-academic-blue-700 flex items-center gap-2">
+                  <Lightbulb className="w-3 h-3" />
+                  Type your question below and I'll analyze {uploadedImages.length > 1 ? 'these images' : 'this image'} thoughtfully
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Enhanced Main Input Form with Apple-style Interactions */}
         <form onSubmit={handleSubmit} className="max-w-4xl mx-auto">
           <div className="flex items-end gap-4">
-            <div className="flex-1 relative">
+            <div className="flex-1 relative group">
+              {/* Enhanced textarea with better focus states */}
               <textarea
                 value={inputText}
                 onChange={(e) => setInputText(e.target.value)}
                 placeholder={
                   isLiveMode 
-                    ? "Live mode active - use voice input"
+                    ? "Live conversation active - speak naturally..."
                     : uploadedImages.length > 0
-                      ? "Describe what you want me to do with the uploaded image(s)..."
-                      : "Ask me anything about teaching, lesson planning, assessments..."
+                      ? "What would you like to know about these images?"
+                      : "Share your teaching thoughts, questions, or challenges..."
                 }
-                className="w-full resize-none rounded-2xl border border-neutral-200 px-4 py-3 pr-24 
-                         focus:ring-2 focus:ring-blue-500/20 focus:border-blue-300 transition-all
-                         min-h-[56px] max-h-32"
+                className="w-full resize-none rounded-2xl border-0 bg-white/90 backdrop-blur-sm 
+                         px-6 py-5 pr-28 shadow-soft focus:shadow-large transition-all duration-500
+                         focus:ring-2 focus:ring-sage-400/30 focus:bg-white/95 min-h-[64px] max-h-40
+                         text-slate-800 placeholder-slate-500 font-medium leading-relaxed
+                         group-hover:shadow-medium"
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
@@ -1546,7 +1915,15 @@ const AITeachingHub: React.FC = () => {
                 disabled={isLoading || isLiveMode}
               />
               
-              <div className="absolute right-2 bottom-2 flex items-center gap-1">
+              {/* Floating character count (subtle) */}
+              {inputText.length > 50 && (
+                <div className="absolute bottom-2 left-4 text-xs text-slate-400 opacity-60">
+                  {inputText.length} characters
+                </div>
+              )}
+              
+              {/* Enhanced Input Actions with Better Micro-interactions */}
+              <div className="absolute right-4 bottom-4 flex items-center gap-2">
                 <input
                   ref={fileInputRef}
                   type="file"
@@ -1556,99 +1933,148 @@ const AITeachingHub: React.FC = () => {
                   className="hidden"
                 />
                 
+                {/* File upload button with enhanced feedback */}
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  className={`p-2 rounded-lg transition-colors ${
+                  className={`group/upload p-3 rounded-xl transition-all duration-300 relative overflow-hidden ${
                     uploadedImages.length > 0
-                      ? 'text-blue-600 bg-blue-50 hover:bg-blue-100'
-                      : 'text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100'
-                  }`}
-                  title="Upload image"
+                      ? 'text-academic-blue-600 bg-academic-blue-50 hover:bg-academic-blue-100 shadow-soft'
+                      : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100/60 hover:shadow-soft'
+                  } hover:scale-110`}
+                  title="Share an image"
                   disabled={uploading}
                 >
-                  {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                  {uploading ? (
+                    <div className="relative">
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                      <div className="absolute inset-0 bg-academic-blue-400/20 rounded-full animate-pulse-gentle"></div>
+                    </div>
+                  ) : (
+                    <>
+                      <Upload className="w-5 h-5 transition-transform duration-200 group-hover/upload:scale-110" />
+                      {/* Shine effect on hover */}
+                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent 
+                                    -translate-x-full group-hover/upload:translate-x-full transition-transform duration-500"></div>
+                    </>
+                  )}
                 </button>
                 
+                {/* Enhanced voice button with waveform indication */}
                 <button
                   type="button"
                   onClick={isRecording ? stopRecording : (isLiveMode ? stopLiveConversation : startRecording)}
-                  className={`p-2 rounded-lg transition-colors ${
+                  className={`group/voice relative p-3 rounded-xl transition-all duration-300 overflow-hidden ${
                     isRecording || isLiveMode
-                      ? 'text-red-600 bg-red-50 hover:bg-red-100' 
-                      : 'text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100'
-                  }`}
+                      ? 'text-white bg-gradient-to-br from-warm-amber-500 to-warm-amber-600 shadow-medium' 
+                      : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100/60 hover:shadow-soft'
+                  } hover:scale-110`}
                   title={
                     isLiveMode 
-                      ? "Stop live conversation" 
+                      ? "End live conversation" 
                       : isRecording 
                         ? "Stop recording" 
-                        : "Voice input"
+                        : "Voice message"
                   }
                 >
-                  {isRecording || isLiveMode ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+                  {isRecording || isLiveMode ? (
+                    <div className="relative">
+                      <MicOff className="w-5 h-5" />
+                      {/* Animated waveform rings */}
+                      <div className="absolute inset-0 rounded-xl">
+                        <div className="absolute inset-0 bg-warm-amber-400/30 rounded-xl animate-ping"></div>
+                        <div className="absolute inset-0 bg-warm-amber-400/20 rounded-xl animate-pulse-gentle"></div>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <Mic className="w-5 h-5 transition-transform duration-200 group-hover/voice:scale-110" />
+                      {/* Shine effect on hover */}
+                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent 
+                                    -translate-x-full group-hover/voice:translate-x-full transition-transform duration-500"></div>
+                    </>
+                  )}
                 </button>
               </div>
             </div>
             
+            {/* Enhanced Send Button with Paper Plane Animation */}
             <button
               type="submit"
               disabled={(!inputText.trim() && uploadedImages.length === 0) || isLoading || isLiveMode}
-              className="p-4 bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-2xl 
-                       hover:from-blue-600 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed 
-                       transition-all duration-300 shadow-lg hover:shadow-xl"
+              className="group relative p-4 bg-gradient-to-br from-sage-500 to-academic-blue-500 text-white rounded-2xl 
+                       hover:from-sage-600 hover:to-academic-blue-600 disabled:opacity-50 
+                       disabled:cursor-not-allowed transition-all duration-300 shadow-soft hover:shadow-large
+                       hover:-translate-y-1 hover:scale-105 disabled:hover:translate-y-0 disabled:hover:scale-100
+                       overflow-hidden"
             >
               {isLoading ? (
-                <Loader2 className="w-5 h-5 animate-spin" />
+                <div className="relative">
+                  <Loader2 className="w-6 h-6 animate-spin" />
+                  {/* Pulsing background */}
+                  <div className="absolute inset-0 bg-white/20 rounded-xl animate-pulse-gentle"></div>
+                </div>
               ) : (
-                <Send className="w-5 h-5" />
+                <>
+                  <Send className="w-6 h-6 transition-transform duration-200 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+                  {/* Shine effect on hover */}
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent 
+                                -translate-x-full group-hover:translate-x-full transition-transform duration-700"></div>
+                </>
               )}
             </button>
           </div>
           
-          <div className="flex items-center justify-between mt-3 text-xs text-neutral-500">
-            <div className="flex items-center gap-4">
-              <span>Press Enter to send, Shift+Enter for new line</span>
-              <span>•</span>
-              <span>Ctrl+K for quick prompts</span>
+          {/* Enhanced Status Information with Better Typography */}
+          <div className="flex items-center justify-between mt-4 text-xs">
+            <div className="flex items-center gap-6 text-slate-500">
+              <span className="flex items-center gap-2">
+                <kbd className="px-2 py-1 bg-slate-100 rounded text-slate-600 font-mono text-xs border">Enter</kbd>
+                to send
+              </span>
+              <span className="flex items-center gap-2">
+                <kbd className="px-2 py-1 bg-slate-100 rounded text-slate-600 font-mono text-xs border">Shift+Enter</kbd>
+                for new line
+              </span>
               {uploadedImages.length > 0 && (
-                <>
-                  <span>•</span>
-                  <span className="text-blue-600">
-                    {uploadedImages.length} image{uploadedImages.length > 1 ? 's' : ''} ready
-                  </span>
-                </>
-              )}
-              {sessionId && (
-                <>
-                  <span>•</span>
-                  <span>Session: {sessionId.slice(0, 8)}...</span>
-                </>
+                <span className="flex items-center gap-2 text-academic-blue-600 font-medium">
+                  <div className="w-2 h-2 bg-academic-blue-400 rounded-full animate-pulse-gentle"></div>
+                  {uploadedImages.length} image{uploadedImages.length > 1 ? 's' : ''} attached
+                </span>
               )}
             </div>
             
+            {/* Enhanced Activity Indicator */}
             {(isRecording || isLiveMode) && (
-              <div className="flex items-center gap-2 text-red-600">
-                <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
-                <span>{isLiveMode ? 'Live conversation...' : 'Recording...'}</span>
+              <div className="flex items-center gap-3 text-warm-amber-600 animate-slide-up">
+                <div className="flex gap-1">
+                  <div className="w-1 h-3 bg-warm-amber-500 rounded-full animate-wave"></div>
+                  <div className="w-1 h-4 bg-warm-amber-500 rounded-full animate-wave" style={{animationDelay: '0.1s'}}></div>
+                  <div className="w-1 h-2 bg-warm-amber-500 rounded-full animate-wave" style={{animationDelay: '0.2s'}}></div>
+                  <div className="w-1 h-4 bg-warm-amber-500 rounded-full animate-wave" style={{animationDelay: '0.3s'}}></div>
+                  <div className="w-1 h-3 bg-warm-amber-500 rounded-full animate-wave" style={{animationDelay: '0.4s'}}></div>
+                </div>
+                <span className="font-medium">
+                  {isLiveMode ? 'Live conversation active' : 'Recording audio'}
+                </span>
               </div>
             )}
           </div>
         </form>
       </div>
 
-      {/* Settings Modal */}
+      {/* Settings Modal - Clean Academic */}
       {showSettings && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full max-h-[80vh] overflow-y-auto">
-            <div className="p-6 border-b border-neutral-200">
+        <div className="fixed inset-0 bg-slate-900/20 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-3xl shadow-large max-w-md w-full max-h-[80vh] overflow-y-auto">
+            <div className="p-6 border-b border-slate-200/50">
               <div className="flex items-center justify-between">
-                <h3 className="text-xl font-bold text-neutral-900">AI Hub Settings</h3>
+                <h3 className="text-xl font-display font-semibold text-slate-800">Teaching Hub Settings</h3>
                 <button
                   onClick={() => setShowSettings(false)}
-                  className="p-2 hover:bg-neutral-100 rounded-lg transition-colors"
+                  className="p-2 hover:bg-slate-100/50 rounded-xl transition-colors duration-200"
                 >
-                  <X className="w-5 h-5 text-neutral-500" />
+                  <X className="w-5 h-5 text-slate-500" />
                 </button>
               </div>
             </div>
@@ -1656,39 +2082,39 @@ const AITeachingHub: React.FC = () => {
             <div className="p-6 space-y-6">
               {/* Voice Settings */}
               <div>
-                <h4 className="font-semibold text-neutral-800 mb-3">Voice Settings</h4>
+                <h4 className="font-semibold text-slate-800 mb-4">Voice & Audio</h4>
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-neutral-700">Enable Voice</span>
+                    <span className="text-sm text-slate-700 font-medium">Enable voice responses</span>
                     <button
                       onClick={() => setVoiceSettings(prev => ({ ...prev, enabled: !prev.enabled }))}
-                      className={`w-12 h-6 rounded-full transition-colors ${
-                        voiceSettings.enabled ? 'bg-blue-500' : 'bg-neutral-300'
+                      className={`w-12 h-6 rounded-full transition-all duration-300 ${
+                        voiceSettings.enabled ? 'bg-sage-500' : 'bg-slate-300'
                       }`}
                     >
-                      <div className={`w-5 h-5 bg-white rounded-full shadow-sm transition-transform ${
+                      <div className={`w-5 h-5 bg-white rounded-full shadow-soft transition-transform duration-300 ${
                         voiceSettings.enabled ? 'translate-x-6' : 'translate-x-0.5'
                       }`} />
                     </button>
                   </div>
                   
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-neutral-700">Auto-play Responses</span>
+                    <span className="text-sm text-slate-700 font-medium">Auto-play responses</span>
                     <button
                       onClick={() => setVoiceSettings(prev => ({ ...prev, autoPlay: !prev.autoPlay }))}
-                      className={`w-12 h-6 rounded-full transition-colors ${
-                        voiceSettings.autoPlay ? 'bg-blue-500' : 'bg-neutral-300'
+                      className={`w-12 h-6 rounded-full transition-all duration-300 ${
+                        voiceSettings.autoPlay ? 'bg-sage-500' : 'bg-slate-300'
                       }`}
                     >
-                      <div className={`w-5 h-5 bg-white rounded-full shadow-sm transition-transform ${
+                      <div className={`w-5 h-5 bg-white rounded-full shadow-soft transition-transform duration-300 ${
                         voiceSettings.autoPlay ? 'translate-x-6' : 'translate-x-0.5'
                       }`} />
                     </button>
                   </div>
                   
                   <div>
-                    <label className="block text-sm text-neutral-700 mb-2">
-                      Speech Speed: {voiceSettings.speed}x
+                    <label className="block text-sm text-slate-700 font-medium mb-2">
+                      Speech speed: {voiceSettings.speed}x
                     </label>
                     <input
                       type="range"
@@ -1697,7 +2123,7 @@ const AITeachingHub: React.FC = () => {
                       step="0.1"
                       value={voiceSettings.speed}
                       onChange={(e) => setVoiceSettings(prev => ({ ...prev, speed: parseFloat(e.target.value) }))}
-                      className="w-full accent-blue-500"
+                      className="w-full accent-sage-500"
                     />
                   </div>
                 </div>
@@ -1718,7 +2144,5 @@ const AITeachingHub: React.FC = () => {
     </div>
   );
 };
-
-
 
 export default AITeachingHub;

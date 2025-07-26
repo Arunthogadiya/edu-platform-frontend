@@ -1,11 +1,22 @@
-/* AI Teaching Hub Styles */
+/* AI Teaching Hub - Intelligent Simplicity Design with Enhanced Micro-interactions */
 
 .ai-teaching-hub {
-  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+  background: linear-gradient(135deg, #fefefe 0%, rgba(134, 162, 134, 0.03) 50%, rgba(70, 130, 180, 0.03) 100%);
   min-height: 100vh;
   position: relative;
+  font-family: 'Inter', system-ui, sans-serif;
+  overflow-x: hidden; /* Prevent horizontal scrolling */
 }
 
+/* Content overflow protection */
+.ai-teaching-hub * {
+  max-width: 100%;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  hyphens: auto;
+}
+
+/* Enhanced background texture with Apple-like depth */
 .ai-teaching-hub::before {
   content: '';
   position: absolute;
@@ -14,23 +25,35 @@
   right: 0;
   bottom: 0;
   background: 
-    radial-gradient(ellipse at top right, rgba(59, 130, 246, 0.05) 0%, transparent 50%),
-    radial-gradient(ellipse at bottom left, rgba(147, 51, 234, 0.05) 0%, transparent 50%);
+    radial-gradient(ellipse at top right, rgba(134, 162, 134, 0.06) 0%, transparent 40%),
+    radial-gradient(ellipse at bottom left, rgba(70, 130, 180, 0.04) 0%, transparent 40%),
+    radial-gradient(ellipse at center, rgba(255, 255, 255, 0.8) 0%, transparent 70%),
+    /* Subtle noise texture */
+    repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent 2px,
+      rgba(255, 255, 255, 0.01) 2px,
+      rgba(255, 255, 255, 0.01) 4px
+    );
   pointer-events: none;
   z-index: 0;
 }
 
+/* Enhanced header with better glassmorphism */
 .ai-hub-header {
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(248, 250, 252, 0.9) 100%);
-  backdrop-filter: blur(20px);
-  border-bottom: 1px solid rgba(226, 232, 240, 0.5);
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(20px) saturate(180%);
+  border-bottom: 1px solid rgba(134, 162, 134, 0.15);
   position: relative;
   z-index: 10;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
 }
 
 .ai-hub-prompts {
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(10px);
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(16px) saturate(150%);
+  border-bottom: 1px solid rgba(134, 162, 134, 0.1);
   position: relative;
   z-index: 5;
 }
@@ -40,9 +63,10 @@
   position: relative;
   z-index: 1;
   scrollbar-width: thin;
-  scrollbar-color: rgba(156, 163, 175, 0.5) transparent;
+  scrollbar-color: rgba(134, 162, 134, 0.3) transparent;
 }
 
+/* Enhanced scrollbar with Apple-like design */
 .ai-hub-messages::-webkit-scrollbar {
   width: 6px;
 }
@@ -52,89 +76,124 @@
 }
 
 .ai-hub-messages::-webkit-scrollbar-thumb {
-  background: rgba(156, 163, 175, 0.5);
-  border-radius: 3px;
+  background: rgba(134, 162, 134, 0.3);
+  border-radius: 6px;
+  transition: background 0.2s ease;
 }
 
 .ai-hub-messages::-webkit-scrollbar-thumb:hover {
-  background: rgba(156, 163, 175, 0.7);
+  background: rgba(134, 162, 134, 0.5);
 }
 
 .ai-hub-input {
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(248, 250, 252, 0.95) 100%);
-  backdrop-filter: blur(8px);
-  border-top: 1px solid rgba(226, 232, 240, 0.5);
-  box-shadow: 0 -4px 6px -1px rgba(0, 0, 0, 0.02);
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(20px) saturate(180%);
+  border-top: 1px solid rgba(134, 162, 134, 0.15);
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.03);
 }
 
-/* Embedded content styles */
-.iframe-loading,
-.image-loading {
-  pointer-events: none;
-  z-index: 10;
+/* Enhanced Micro-interactions and Animations */
+
+/* Thoughtful AI thinking animation with organic timing */
+@keyframes thinking {
+  0%, 20% {
+    opacity: 0.3;
+    transform: scale(0.8);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.2);
+  }
+  100% {
+    opacity: 0.3;
+    transform: scale(0.8);
+  }
 }
 
-.ai-hub-messages iframe,
-.ai-hub-messages img {
-  transition: opacity 0.3s ease-in-out;
+.animate-thinking {
+  animation: thinking 1.8s ease-in-out infinite;
 }
 
-.ai-hub-messages iframe[data-loaded="true"] + .iframe-loading,
-.ai-hub-messages img[data-loaded="true"] + .image-loading {
-  display: none;
+/* Heartbeat for live connection with natural rhythm */
+@keyframes heartbeat {
+  0%, 50%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  25%, 75% {
+    opacity: 0.7;
+    transform: scale(1.1);
+  }
 }
 
-/* Enhanced scrollbar for embedded content */
-.ai-hub-messages .space-y-4::-webkit-scrollbar {
-  width: 6px;
+.animate-heartbeat {
+  animation: heartbeat 2s ease-in-out infinite;
 }
 
-.ai-hub-messages .space-y-4::-webkit-scrollbar-track {
-  background: rgba(243, 244, 246, 0.5);
-  border-radius: 3px;
+/* Gentle pulse for active states */
+@keyframes pulse-gentle {
+  0%, 100% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 0.9;
+  }
 }
 
-.ai-hub-messages .space-y-4::-webkit-scrollbar-thumb {
-  background: rgba(156, 163, 175, 0.4);
-  border-radius: 3px;
+.animate-pulse-gentle {
+  animation: pulse-gentle 3s ease-in-out infinite;
 }
 
-.ai-hub-messages .space-y-4::-webkit-scrollbar-thumb:hover {
-  background: rgba(156, 163, 175, 0.6);
+/* Floating animation for welcome elements */
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
 }
 
-/* Message animations */
+.animate-float {
+  animation: float 4s ease-in-out infinite;
+}
+
+/* Enhanced message animations with Apple-like spring physics */
 @keyframes message-slide-in {
   from {
     opacity: 0;
-    transform: translateY(20px);
+    transform: translateY(20px) scale(0.98);
+    filter: blur(2px);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: translateY(0) scale(1);
+    filter: blur(0);
   }
 }
 
-.ai-hub-messages > div > div {
-  animation: message-slide-in 0.3s ease-out;
+.animate-message-slide-in {
+  animation: message-slide-in 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-/* Typing indicator */
-@keyframes typing-bounce {
-  0%, 60%, 100% {
-    transform: translateY(0);
-  }
-  30% {
+/* Slide down animation for prompts header */
+@keyframes slide-down {
+  from {
+    opacity: 0;
     transform: translateY(-10px);
   }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
-.typing-indicator {
-  animation: typing-bounce 1.4s infinite ease-in-out;
+.animate-slide-down {
+  animation: slide-down 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-/* Loading states and animations */
-@keyframes fade-in-up {
+/* Slide up animation with spring */
+@keyframes slide-up {
   from {
     opacity: 0;
     transform: translateY(20px);
@@ -145,10 +204,15 @@
   }
 }
 
-@keyframes fade-in-scale {
+.animate-slide-up {
+  animation: slide-up 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Scale in animation for drag feedback */
+@keyframes scale-in {
   from {
     opacity: 0;
-    transform: scale(0.95);
+    transform: scale(0.9);
   }
   to {
     opacity: 1;
@@ -156,350 +220,160 @@
   }
 }
 
-@keyframes pulse-soft {
+.animate-scale-in {
+  animation: scale-in 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Bounce gentle for upload feedback */
+@keyframes bounce-gentle {
   0%, 100% {
-    opacity: 1;
+    transform: translateY(0);
   }
   50% {
+    transform: translateY(-4px);
+  }
+}
+
+.animate-bounce-gentle {
+  animation: bounce-gentle 2s ease-in-out infinite;
+}
+
+/* Wave animation for voice visualization */
+@keyframes wave {
+  0%, 50%, 100% {
+    transform: scaleY(1);
     opacity: 0.7;
   }
-}
-
-@keyframes gradient-shift {
-  0% {
-    background-position: 0% 50%;
-  }
-  50% {
-    background-position: 100% 50%;
-  }
-  100% {
-    background-position: 0% 50%;
-  }
-}
-
-.loading-message {
-  animation: fade-in-up 0.3s ease-out;
-}
-
-.message-appear {
-  animation: fade-in-scale 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.processing-indicator {
-  animation: pulse-soft 2s infinite;
-}
-
-.gradient-animated {
-  background: linear-gradient(-45deg, #3b82f6, #8b5cf6, #ec4899, #10b981);
-  background-size: 400% 400%;
-  animation: gradient-shift 3s ease infinite;
-}
-
-/* Enhanced button styles */
-.ai-button {
-  position: relative;
-  overflow: hidden;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  transform: translateZ(0);
-}
-
-.ai-button::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-  transition: left 0.5s;
-}
-
-.ai-button:hover::before {
-  left: 100%;
-}
-
-.ai-button:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
-}
-
-.ai-button:active {
-  transform: translateY(0);
-}
-
-/* Message bubble animations */
-.message-bubble {
-  position: relative;
-  transition: all 0.3s ease;
-}
-
-.message-bubble:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-}
-
-.user-message {
-  background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
-  color: white;
-}
-
-.ai-message {
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(226, 232, 240, 0.5);
-}
-
-/* Loading dots animation */
-@keyframes loading-dots {
-  0%, 20% {
-    color: rgba(0, 0, 0, 0.4);
-    text-shadow: 0.25em 0 0 rgba(0, 0, 0, 0.2),
-                 0.5em 0 0 rgba(0, 0, 0, 0.2);
-  }
-  40% {
-    color: rgba(0, 0, 0, 1);
-    text-shadow: 0.25em 0 0 rgba(0, 0, 0, 0.4),
-                 0.5em 0 0 rgba(0, 0, 0, 0.2);
-  }
-  60% {
-    text-shadow: 0.25em 0 0 rgba(0, 0, 0, 1),
-                 0.5em 0 0 rgba(0, 0, 0, 0.4);
-  }
-  80%, 100% {
-    text-shadow: 0.25em 0 0 rgba(0, 0, 0, 1),
-                 0.5em 0 0 rgba(0, 0, 0, 1);
-  }
-}
-
-.loading-dots {
-  animation: loading-dots 1.4s infinite;
-}
-
-/* Input field enhancements */
-.ai-input-field {
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  border: 2px solid transparent;
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(10px);
-}
-
-.ai-input-field:focus {
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-  transform: scale(1.02);
-}
-
-.ai-input-field:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-/* Gradient text effects */
-.gradient-text {
-  background: linear-gradient(135deg, #3b82f6, #8b5cf6);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-/* Glass morphism effects */
-.glass-card {
-  background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  box-shadow: 
-    0 8px 32px rgba(0, 0, 0, 0.1),
-    inset 0 1px 0 rgba(255, 255, 255, 0.2);
-}
-
-/* Voice recording pulse */
-@keyframes pulse-recording {
-  0% {
-    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
-  }
-  70% {
-    box-shadow: 0 0 0 10px rgba(239, 68, 68, 0);
-  }
-  100% {
-    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
-  }
-}
-
-.recording-pulse {
-  animation: pulse-recording 2s infinite;
-}
-
-/* Enhanced recording indicator */
-@keyframes recording-glow {
-  0%, 100% {
-    box-shadow: 0 0 5px rgba(239, 68, 68, 0.5);
-  }
-  50% {
-    box-shadow: 0 0 20px rgba(239, 68, 68, 0.8), 0 0 30px rgba(239, 68, 68, 0.6);
-  }
-}
-
-.recording-active {
-  animation: recording-glow 1.5s ease-in-out infinite;
-}
-
-/* Connection status indicator */
-@keyframes connection-pulse {
-  0%, 100% {
+  25% {
+    transform: scaleY(1.5);
     opacity: 1;
   }
-  50% {
-    opacity: 0.5;
+  75% {
+    transform: scaleY(0.8);
+    opacity: 0.8;
   }
 }
 
-.connection-indicator {
-  animation: connection-pulse 2s infinite;
+.animate-wave {
+  animation: wave 1.2s ease-in-out infinite;
+  transform-origin: bottom;
 }
 
-.connection-connected {
-  background: linear-gradient(135deg, #10b981, #059669);
+/* Typing animation for AI responses */
+@keyframes typing {
+  from {
+    width: 0;
+  }
+  to {
+    width: 100%;
+  }
 }
 
-.connection-connecting {
-  background: linear-gradient(135deg, #f59e0b, #d97706);
-  animation: connection-pulse 1s infinite;
+.animate-typing {
+  overflow: hidden;
+  white-space: nowrap;
+  animation: typing 2s steps(40, end);
 }
 
-.connection-disconnected {
-  background: linear-gradient(135deg, #ef4444, #dc2626);
-}
-
-/* Drag and drop styles */
-.drag-overlay {
-  background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(147, 51, 234, 0.1) 100%);
-  backdrop-filter: blur(10px);
-  border: 2px dashed #3b82f6;
-  border-radius: 1rem;
-}
-
-/* Quick prompt hover effects */
-.quick-prompt-card {
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  transform-origin: center;
-}
-
-.quick-prompt-card:hover {
-  transform: translateY(-4px) scale(1.02);
-  box-shadow: 
-    0 20px 25px -5px rgba(0, 0, 0, 0.1),
-    0 10px 10px -5px rgba(0, 0, 0, 0.04);
-}
-
-/* Settings modal backdrop */
-.modal-backdrop {
-  backdrop-filter: blur(8px);
-  background: rgba(0, 0, 0, 0.3);
-}
-
-/* Shine effect for buttons */
-@keyframes shine {
+/* Ripple effect for interactive elements */
+@keyframes ripple {
   0% {
-    transform: translateX(-100%);
+    transform: scale(0);
+    opacity: 1;
   }
   100% {
-    transform: translateX(100%);
+    transform: scale(4);
+    opacity: 0;
   }
 }
 
-.shine-effect {
-  position: relative;
-  overflow: hidden;
+.animate-ripple {
+  animation: ripple 0.6s linear infinite;
 }
 
-.shine-effect::before {
+/* Enhanced card hover effects with Apple-like physics */
+.ai-hub-messages .rounded-2xl:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.1);
+  transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Enhanced input field with better focus states */
+.ai-hub-input textarea:focus {
+  outline: none;
+  ring: 2px solid rgba(134, 162, 134, 0.3);
+  border-color: rgba(134, 162, 134, 0.4);
+  box-shadow: 0 8px 32px rgba(134, 162, 134, 0.15);
+  transform: translateY(-1px);
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Enhanced button hover effects with spring physics */
+.ai-hub-header button:hover,
+.ai-hub-input button:hover {
+  transform: translateY(-2px) scale(1.05);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.ai-hub-header button:active,
+.ai-hub-input button:active {
+  transform: translateY(0) scale(0.98);
+  transition: all 0.1s ease-out;
+}
+
+/* Enhanced quick prompt cards with better hover states */
+.ai-hub-prompts button:hover {
+  transform: translateY(-4px) scale(1.02);
+  box-shadow: 0 16px 32px rgba(0, 0, 0, 0.12);
+  transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.ai-hub-prompts button:active {
+  transform: translateY(-2px) scale(1.01);
+  transition: all 0.1s ease-out;
+}
+
+/* Voice recording states with enhanced feedback */
+.recording-active {
+  position: relative;
+}
+
+.recording-active::after {
   content: '';
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgba(255, 255, 255, 0.3),
-    transparent
-  );
-  transform: translateX(-100%);
-  transition: transform 0.6s;
+  inset: -2px;
+  background: linear-gradient(45deg, rgba(255, 166, 38, 0.3), rgba(255, 166, 38, 0.1));
+  border-radius: inherit;
+  animation: pulse-gentle 2s ease-in-out infinite;
+  z-index: -1;
 }
 
-.shine-effect:hover::before {
-  animation: shine 0.8s ease-in-out;
+/* Enhanced drag and drop styling */
+.drag-overlay {
+  background: linear-gradient(135deg, rgba(134, 162, 134, 0.08) 0%, rgba(70, 130, 180, 0.08) 100%);
+  backdrop-filter: blur(12px);
+  border: 2px dashed rgba(134, 162, 134, 0.3);
+  border-radius: 16px;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-/* Responsive design */
-@media (max-width: 768px) {
-  .ai-hub-header {
-    padding: 1rem;
-  }
-  
-  .ai-hub-prompts {
-    padding: 1rem;
-  }
-  
-  .ai-hub-input {
-    padding: 1rem;
-  }
-  
-  .ai-hub-messages {
-    padding: 1rem;
-  }
+/* Settings modal backdrop with enhanced blur */
+.modal-backdrop {
+  backdrop-filter: blur(16px) saturate(150%);
+  background: rgba(51, 65, 85, 0.15);
 }
 
-/* Dark mode support (if needed) */
-@media (prefers-color-scheme: dark) {
-  .ai-teaching-hub {
-    background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
-  }
-  
-  .ai-hub-header,
-  .ai-hub-input {
-    background: linear-gradient(135deg, rgba(30, 41, 59, 0.9) 0%, rgba(15, 23, 42, 0.9) 100%);
-    border-color: rgba(71, 85, 105, 0.5);
-  }
-  
-  .ai-hub-prompts {
-    background: rgba(30, 41, 59, 0.95);
-  }
-}
-
-/* Accessibility improvements */
-@media (prefers-reduced-motion: reduce) {
-  .ai-hub-messages > div > div {
-    animation: none;
-  }
-  
-  .typing-indicator {
-    animation: none;
-  }
-  
-  .recording-pulse {
-    animation: none;
-  }
-  
-  .shine-effect::before {
-    animation: none;
-  }
-}
-
-/* Focus states for better accessibility */
-.ai-teaching-hub button:focus-visible,
-.ai-teaching-hub input:focus-visible {
-  outline: 2px solid #3b82f6;
-  outline-offset: 2px;
-}
-
-/* Loading states */
+/* Enhanced shimmer loading animation */
 .loading-shimmer {
-  background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+  background: linear-gradient(
+    90deg, 
+    rgba(248, 250, 252, 0.8) 25%, 
+    rgba(241, 245, 249, 0.9) 50%, 
+    rgba(248, 250, 252, 0.8) 75%
+  );
   background-size: 200% 100%;
-  animation: shimmer 2s infinite;
+  animation: shimmer 2.5s ease-in-out infinite;
 }
 
 @keyframes shimmer {
@@ -511,11 +385,457 @@
   }
 }
 
-/* Smooth transitions for all interactive elements */
+/* Enhanced typography with better text rendering */
+.font-display {
+  font-family: 'Poppins', 'Inter', system-ui, sans-serif;
+  font-feature-settings: 'kern' 1, 'liga' 1;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Enhanced prose styling for AI responses */
+.prose-slate {
+  --tw-prose-body: rgb(71 85 105);
+  --tw-prose-headings: rgb(51 65 85);
+  --tw-prose-lead: rgb(100 116 139);
+  --tw-prose-links: rgb(134 162 134);
+  --tw-prose-bold: rgb(51 65 85);
+  --tw-prose-counters: rgb(100 116 139);
+  --tw-prose-bullets: rgb(203 213 225);
+  --tw-prose-hr: rgb(226 232 240);
+  --tw-prose-quotes: rgb(51 65 85);
+  --tw-prose-quote-borders: rgb(226 232 240);
+  --tw-prose-captions: rgb(100 116 139);
+  --tw-prose-code: rgb(51 65 85);
+  --tw-prose-pre-code: rgb(226 232 240);
+  --tw-prose-pre-bg: rgb(248 250 252);
+  --tw-prose-th-borders: rgb(203 213 225);
+  --tw-prose-td-borders: rgb(226 232 240);
+}
+
+/* Responsive design with enhanced mobile experience */
+@media (max-width: 768px) {
+  .ai-hub-header,
+  .ai-hub-prompts,
+  .ai-hub-input {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+  
+  .ai-hub-messages {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+
+  /* Reduce animation intensity on mobile */
+  .ai-hub-prompts button:hover {
+    transform: translateY(-2px) scale(1.01);
+  }
+  
+  .ai-hub-messages .rounded-2xl:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+  }
+}
+
+/* Accessibility improvements with better motion handling */
+@media (prefers-reduced-motion: reduce) {
+  .ai-hub-messages > div > div,
+  .animate-thinking,
+  .animate-heartbeat,
+  .animate-pulse-gentle,
+  .animate-float,
+  .animate-message-slide-in,
+  .animate-slide-down,
+  .animate-slide-up,
+  .animate-scale-in,
+  .animate-bounce-gentle,
+  .animate-wave,
+  .animate-typing,
+  .animate-ripple {
+    animation: none;
+  }
+  
+  /* Preserve essential transitions but reduce intensity */
+  .ai-teaching-hub * {
+    transition-duration: 0.1s;
+  }
+}
+
+/* Enhanced high contrast mode support */
+@media (prefers-contrast: high) {
+  .ai-teaching-hub {
+    background: white;
+  }
+  
+  .ai-hub-header,
+  .ai-hub-input {
+    background: white;
+    border-color: #000;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  }
+  
+  .ai-hub-prompts {
+    background: #f8f9fa;
+    border-color: #000;
+  }
+  
+  /* Enhanced button contrast */
+  .ai-hub-header button,
+  .ai-hub-input button {
+    border: 1px solid #000;
+  }
+}
+
+/* Enhanced focus states for better accessibility */
+.ai-teaching-hub button:focus-visible,
+.ai-teaching-hub input:focus-visible,
+.ai-teaching-hub textarea:focus-visible {
+  outline: 2px solid rgba(134, 162, 134, 0.6);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgba(134, 162, 134, 0.2);
+}
+
+/* Enhanced smooth transitions with spring physics */
 .ai-teaching-hub * {
   transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter;
-  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-  transition-duration: 150ms;
+  transition-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1);
+  transition-duration: 300ms;
+}
+
+/* Line clamp utility for text truncation */
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.line-clamp-3 {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Custom utility classes for enhanced interactions */
+.glass-morphism {
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.paper-texture {
+  position: relative;
+}
+
+.paper-texture::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: 
+    repeating-linear-gradient(
+      45deg,
+      transparent,
+      transparent 1px,
+      rgba(255, 255, 255, 0.05) 1px,
+      rgba(255, 255, 255, 0.05) 2px
+    );
+  pointer-events: none;
+}
+
+/* Enhanced button states with better feedback */
+.btn-primary {
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-primary::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s;
+}
+
+.btn-primary:hover::before {
+  left: 100%;
+}
+
+.ai-hub-header {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(20px) saturate(180%);
+  border-bottom: 1px solid rgba(134, 162, 134, 0.15);
+  position: relative;
+  z-index: 10;
+}
+
+.ai-hub-prompts {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(16px) saturate(150%);
+  border-bottom: 1px solid rgba(134, 162, 134, 0.1);
+  position: relative;
+  z-index: 5;
+}
+
+.ai-hub-messages {
+  background: transparent;
+  position: relative;
+  z-index: 1;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(134, 162, 134, 0.3) transparent;
+}
+
+/* Academic-style scrollbar */
+.ai-hub-messages::-webkit-scrollbar {
+  width: 6px;
+}
+
+.ai-hub-messages::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.ai-hub-messages::-webkit-scrollbar-thumb {
+  background: rgba(134, 162, 134, 0.3);
+  border-radius: 6px;
+}
+
+.ai-hub-messages::-webkit-scrollbar-thumb:hover {
+  background: rgba(134, 162, 134, 0.5);
+}
+
+.ai-hub-input {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(20px) saturate(180%);
+  border-top: 1px solid rgba(134, 162, 134, 0.15);
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.03);
+}
+
+/* Gentle Intelligence Indicators */
+
+/* Thoughtful AI thinking animation */
+@keyframes thinking {
+  0%, 20% {
+    opacity: 0.3;
+    transform: scale(0.8);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.2);
+  }
+  100% {
+    opacity: 0.3;
+    transform: scale(0.8);
+  }
+}
+
+.animate-thinking {
+  animation: thinking 1.8s ease-in-out infinite;
+}
+
+/* Heartbeat for live connection */
+@keyframes heartbeat {
+  0%, 50%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  25%, 75% {
+    opacity: 0.7;
+    transform: scale(1.1);
+  }
+}
+
+.animate-heartbeat {
+  animation: heartbeat 2s ease-in-out infinite;
+}
+
+/* Gentle pulse for active states */
+@keyframes pulse-gentle {
+  0%, 100% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 0.9;
+  }
+}
+
+.animate-pulse-gentle {
+  animation: pulse-gentle 3s ease-in-out infinite;
+}
+
+/* Floating animation for welcome elements */
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+.animate-float {
+  animation: float 4s ease-in-out infinite;
+}
+
+/* Message animations - Organic appearance */
+@keyframes message-slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.ai-hub-messages > div > div {
+  animation: message-slide-in 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+/* Card hover effects - Subtle and warm */
+.ai-hub-messages .rounded-2xl:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+  transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+/* Input field enhancements */
+.ai-hub-input textarea:focus {
+  outline: none;
+  ring: 2px solid rgba(134, 162, 134, 0.3);
+  border-color: rgba(134, 162, 134, 0.4);
+  box-shadow: 0 4px 20px rgba(134, 162, 134, 0.1);
+}
+
+/* Button hover effects - Academic warmth */
+.ai-hub-header button:hover,
+.ai-hub-input button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.ai-hub-header button:active,
+.ai-hub-input button:active {
+  transform: translateY(0);
+  transition: all 0.1s ease-out;
+}
+
+/* Quick prompt cards - Gentle interaction */
+.ai-hub-prompts button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+/* Voice recording states */
+.recording-active {
+  position: relative;
+}
+
+.recording-active::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  background: linear-gradient(45deg, rgba(255, 166, 38, 0.3), rgba(255, 166, 38, 0.1));
+  border-radius: inherit;
+  animation: pulse-gentle 2s ease-in-out infinite;
+  z-index: -1;
+}
+
+/* Drag and drop styling */
+.drag-overlay {
+  background: linear-gradient(135deg, rgba(134, 162, 134, 0.08) 0%, rgba(70, 130, 180, 0.08) 100%);
+  backdrop-filter: blur(12px);
+  border: 2px dashed rgba(134, 162, 134, 0.3);
+  border-radius: 16px;
+}
+
+/* Settings modal backdrop */
+.modal-backdrop {
+  backdrop-filter: blur(12px) saturate(150%);
+  background: rgba(51, 65, 85, 0.15);
+}
+
+/* Loading states - Gentle and reassuring */
+.loading-shimmer {
+  background: linear-gradient(
+    90deg, 
+    rgba(248, 250, 252, 0.8) 25%, 
+    rgba(241, 245, 249, 0.9) 50%, 
+    rgba(248, 250, 252, 0.8) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 2.5s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+/* Typography enhancements */
+.font-display {
+  font-family: 'Poppins', 'Inter', system-ui, sans-serif;
+  font-feature-settings: 'kern' 1, 'liga' 1;
+}
+
+/* Prose styling for AI responses */
+.prose-slate {
+  --tw-prose-body: rgb(71 85 105);
+  --tw-prose-headings: rgb(51 65 85);
+  --tw-prose-lead: rgb(100 116 139);
+  --tw-prose-links: rgb(134 162 134);
+  --tw-prose-bold: rgb(51 65 85);
+  --tw-prose-counters: rgb(100 116 139);
+  --tw-prose-bullets: rgb(203 213 225);
+  --tw-prose-hr: rgb(226 232 240);
+  --tw-prose-quotes: rgb(51 65 85);
+  --tw-prose-quote-borders: rgb(226 232 240);
+  --tw-prose-captions: rgb(100 116 139);
+  --tw-prose-code: rgb(51 65 85);
+  --tw-prose-pre-code: rgb(226 232 240);
+  --tw-prose-pre-bg: rgb(248 250 252);
+  --tw-prose-th-borders: rgb(203 213 225);
+  --tw-prose-td-borders: rgb(226 232 240);
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .ai-hub-header,
+  .ai-hub-prompts,
+  .ai-hub-input {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+  
+  .ai-hub-messages {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+}
+
+/* Accessibility improvements */
+@media (prefers-reduced-motion: reduce) {
+  .ai-hub-messages > div > div {
+    animation: none;
+  }
+  
+  .animate-thinking,
+  .animate-heartbeat,
+  .animate-pulse-gentle,
+  .animate-float {
+    animation: none;
+  }
 }
 
 /* High contrast mode support */
@@ -524,9 +844,44 @@
     background: white;
   }
   
-  .glass-card {
+  .ai-hub-header,
+  .ai-hub-input {
     background: white;
-    border: 2px solid black;
-    backdrop-filter: none;
+    border-color: #000;
   }
+  
+  .ai-hub-prompts {
+    background: #f8f9fa;
+    border-color: #000;
+  }
+}
+
+/* Focus states for accessibility */
+.ai-teaching-hub button:focus-visible,
+.ai-teaching-hub input:focus-visible,
+.ai-teaching-hub textarea:focus-visible {
+  outline: 2px solid rgba(134, 162, 134, 0.6);
+  outline-offset: 2px;
+}
+
+/* Smooth transitions for all interactive elements */
+.ai-teaching-hub * {
+  transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter;
+  transition-timing-function: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  transition-duration: 200ms;
+}
+
+/* Line clamp utility for text truncation */
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.line-clamp-3 {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
