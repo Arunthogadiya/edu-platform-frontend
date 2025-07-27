@@ -1,11 +1,11 @@
-/* AI Teaching Hub - Intelligent Simplicity Design with Enhanced Micro-interactions */
+/* AI Teaching Hub - Clean Professional Design */
 
 .ai-teaching-hub {
-  background: linear-gradient(135deg, #fefefe 0%, rgba(134, 162, 134, 0.03) 50%, rgba(70, 130, 180, 0.03) 100%);
+  background: #ffffff;
   min-height: 100vh;
   position: relative;
   font-family: 'Inter', system-ui, sans-serif;
-  overflow-x: hidden; /* Prevent horizontal scrolling */
+  overflow-x: hidden;
 }
 
 /* Content overflow protection */
@@ -16,59 +16,33 @@
   hyphens: auto;
 }
 
-/* Enhanced background texture with Apple-like depth */
-.ai-teaching-hub::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: 
-    radial-gradient(ellipse at top right, rgba(134, 162, 134, 0.06) 0%, transparent 40%),
-    radial-gradient(ellipse at bottom left, rgba(70, 130, 180, 0.04) 0%, transparent 40%),
-    radial-gradient(ellipse at center, rgba(255, 255, 255, 0.8) 0%, transparent 70%),
-    /* Subtle noise texture */
-    repeating-linear-gradient(
-      90deg,
-      transparent,
-      transparent 2px,
-      rgba(255, 255, 255, 0.01) 2px,
-      rgba(255, 255, 255, 0.01) 4px
-    );
-  pointer-events: none;
-  z-index: 0;
-}
-
-/* Enhanced header with better glassmorphism */
+/* Clean header design */
 .ai-hub-header {
-  background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(20px) saturate(180%);
-  border-bottom: 1px solid rgba(134, 162, 134, 0.15);
+  background: #ffffff;
+  border-bottom: 1px solid #e2e8f0;
   position: relative;
   z-index: 10;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
 .ai-hub-prompts {
-  background: rgba(255, 255, 255, 0.7);
-  backdrop-filter: blur(16px) saturate(150%);
-  border-bottom: 1px solid rgba(134, 162, 134, 0.1);
+  background: #f8fafc;
+  border-bottom: 1px solid #e2e8f0;
   position: relative;
   z-index: 5;
 }
 
 .ai-hub-messages {
-  background: transparent;
+  background: #ffffff;
   position: relative;
   z-index: 1;
   scrollbar-width: thin;
-  scrollbar-color: rgba(134, 162, 134, 0.3) transparent;
+  scrollbar-color: rgba(148, 163, 184, 0.3) transparent;
 }
 
-/* Enhanced scrollbar with Apple-like design */
+/* Clean scrollbar design */
 .ai-hub-messages::-webkit-scrollbar {
-  width: 6px;
+  width: 4px;
 }
 
 .ai-hub-messages::-webkit-scrollbar-track {
@@ -76,295 +50,125 @@
 }
 
 .ai-hub-messages::-webkit-scrollbar-thumb {
-  background: rgba(134, 162, 134, 0.3);
-  border-radius: 6px;
+  background: rgba(148, 163, 184, 0.4);
+  border-radius: 4px;
   transition: background 0.2s ease;
 }
 
 .ai-hub-messages::-webkit-scrollbar-thumb:hover {
-  background: rgba(134, 162, 134, 0.5);
+  background: rgba(148, 163, 184, 0.6);
 }
 
 .ai-hub-input {
-  background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(20px) saturate(180%);
-  border-top: 1px solid rgba(134, 162, 134, 0.15);
-  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.03);
+  background: #ffffff;
+  border-top: 1px solid #e2e8f0;
+  box-shadow: 0 -1px 3px rgba(0, 0, 0, 0.05);
 }
 
-/* Enhanced Micro-interactions and Animations */
+/* Simplified Animations */
 
-/* Thoughtful AI thinking animation with organic timing */
+/* Simple thinking animation */
 @keyframes thinking {
-  0%, 20% {
-    opacity: 0.3;
-    transform: scale(0.8);
+  0%, 100% {
+    opacity: 0.4;
   }
   50% {
     opacity: 1;
-    transform: scale(1.2);
-  }
-  100% {
-    opacity: 0.3;
-    transform: scale(0.8);
   }
 }
 
 .animate-thinking {
-  animation: thinking 1.8s ease-in-out infinite;
+  animation: thinking 1.5s ease-in-out infinite;
 }
 
-/* Heartbeat for live connection with natural rhythm */
-@keyframes heartbeat {
-  0%, 50%, 100% {
-    opacity: 1;
-    transform: scale(1);
-  }
-  25%, 75% {
-    opacity: 0.7;
-    transform: scale(1.1);
-  }
-}
-
-.animate-heartbeat {
-  animation: heartbeat 2s ease-in-out infinite;
-}
-
-/* Gentle pulse for active states */
+/* Subtle pulse for active states */
 @keyframes pulse-gentle {
   0%, 100% {
-    opacity: 0.6;
+    opacity: 0.8;
   }
   50% {
-    opacity: 0.9;
+    opacity: 1;
   }
 }
 
 .animate-pulse-gentle {
-  animation: pulse-gentle 3s ease-in-out infinite;
+  animation: pulse-gentle 2s ease-in-out infinite;
 }
 
-/* Floating animation for welcome elements */
-@keyframes float {
-  0%, 100% {
-    transform: translateY(0px);
-  }
-  50% {
-    transform: translateY(-8px);
-  }
-}
-
-.animate-float {
-  animation: float 4s ease-in-out infinite;
-}
-
-/* Enhanced message animations with Apple-like spring physics */
+/* Clean message slide-in */
 @keyframes message-slide-in {
   from {
     opacity: 0;
-    transform: translateY(20px) scale(0.98);
-    filter: blur(2px);
+    transform: translateY(10px);
   }
   to {
     opacity: 1;
-    transform: translateY(0) scale(1);
-    filter: blur(0);
+    transform: translateY(0);
   }
 }
 
 .animate-message-slide-in {
-  animation: message-slide-in 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+  animation: message-slide-in 0.3s ease-out;
 }
 
-/* Slide down animation for prompts header */
-@keyframes slide-down {
-  from {
-    opacity: 0;
-    transform: translateY(-10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.animate-slide-down {
-  animation: slide-down 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-/* Slide up animation with spring */
-@keyframes slide-up {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.animate-slide-up {
-  animation: slide-up 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-/* Scale in animation for drag feedback */
-@keyframes scale-in {
-  from {
-    opacity: 0;
-    transform: scale(0.9);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-.animate-scale-in {
-  animation: scale-in 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-/* Bounce gentle for upload feedback */
-@keyframes bounce-gentle {
-  0%, 100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-4px);
-  }
-}
-
-.animate-bounce-gentle {
-  animation: bounce-gentle 2s ease-in-out infinite;
-}
-
-/* Wave animation for voice visualization */
-@keyframes wave {
-  0%, 50%, 100% {
-    transform: scaleY(1);
-    opacity: 0.7;
-  }
-  25% {
-    transform: scaleY(1.5);
-    opacity: 1;
-  }
-  75% {
-    transform: scaleY(0.8);
-    opacity: 0.8;
-  }
-}
-
-.animate-wave {
-  animation: wave 1.2s ease-in-out infinite;
-  transform-origin: bottom;
-}
-
-/* Typing animation for AI responses */
-@keyframes typing {
-  from {
-    width: 0;
-  }
-  to {
-    width: 100%;
-  }
-}
-
-.animate-typing {
-  overflow: hidden;
-  white-space: nowrap;
-  animation: typing 2s steps(40, end);
-}
-
-/* Ripple effect for interactive elements */
-@keyframes ripple {
-  0% {
-    transform: scale(0);
-    opacity: 1;
-  }
-  100% {
-    transform: scale(4);
-    opacity: 0;
-  }
-}
-
-.animate-ripple {
-  animation: ripple 0.6s linear infinite;
-}
-
-/* Enhanced card hover effects with Apple-like physics */
+/* Clean hover effects */
 .ai-hub-messages .rounded-2xl:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.1);
-  transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  transition: all 0.2s ease;
 }
 
-/* Enhanced input field with better focus states */
+/* Simple input focus state */
 .ai-hub-input textarea:focus {
   outline: none;
-  ring: 2px solid rgba(134, 162, 134, 0.3);
-  border-color: rgba(134, 162, 134, 0.4);
-  box-shadow: 0 8px 32px rgba(134, 162, 134, 0.15);
-  transform: translateY(-1px);
-  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  border-color: rgba(59, 130, 246, 0.5);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  transition: all 0.2s ease;
 }
 
-/* Enhanced button hover effects with spring physics */
+/* Clean button hover effects */
 .ai-hub-header button:hover,
 .ai-hub-input button:hover {
-  transform: translateY(-2px) scale(1.05);
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
-  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s ease;
 }
 
 .ai-hub-header button:active,
 .ai-hub-input button:active {
-  transform: translateY(0) scale(0.98);
-  transition: all 0.1s ease-out;
+  transform: translateY(0);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  transition: all 0.1s ease;
 }
 
-/* Enhanced quick prompt cards with better hover states */
+/* Simple quick prompt hover */
 .ai-hub-prompts button:hover {
-  transform: translateY(-4px) scale(1.02);
-  box-shadow: 0 16px 32px rgba(0, 0, 0, 0.12);
-  transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s ease;
 }
 
-.ai-hub-prompts button:active {
-  transform: translateY(-2px) scale(1.01);
-  transition: all 0.1s ease-out;
-}
-
-/* Voice recording states with enhanced feedback */
+/* Simple recording state */
 .recording-active {
   position: relative;
-}
-
-.recording-active::after {
-  content: '';
-  position: absolute;
-  inset: -2px;
-  background: linear-gradient(45deg, rgba(255, 166, 38, 0.3), rgba(255, 166, 38, 0.1));
+  border: 2px solid rgba(239, 68, 68, 0.5);
   border-radius: inherit;
-  animation: pulse-gentle 2s ease-in-out infinite;
-  z-index: -1;
 }
 
-/* Enhanced drag and drop styling */
+/* Clean drag and drop */
 .drag-overlay {
-  background: linear-gradient(135deg, rgba(134, 162, 134, 0.08) 0%, rgba(70, 130, 180, 0.08) 100%);
-  backdrop-filter: blur(12px);
-  border: 2px dashed rgba(134, 162, 134, 0.3);
-  border-radius: 16px;
-  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  background: rgba(59, 130, 246, 0.05);
+  border: 2px dashed rgba(59, 130, 246, 0.3);
+  border-radius: 12px;
+  transition: all 0.2s ease;
 }
 
-/* Settings modal backdrop with enhanced blur */
+/* Simple modal backdrop */
 .modal-backdrop {
-  backdrop-filter: blur(16px) saturate(150%);
-  background: rgba(51, 65, 85, 0.15);
+  background: rgba(0, 0, 0, 0.5);
 }
 
-/* Enhanced shimmer loading animation */
+/* Simple loading animation */
 .loading-shimmer {
   background: linear-gradient(
     90deg, 
@@ -373,7 +177,7 @@
     rgba(248, 250, 252, 0.8) 75%
   );
   background-size: 200% 100%;
-  animation: shimmer 2.5s ease-in-out infinite;
+  animation: shimmer 1.5s ease-in-out infinite;
 }
 
 @keyframes shimmer {
@@ -385,21 +189,21 @@
   }
 }
 
-/* Enhanced typography with better text rendering */
+/* Clean typography */
 .font-display {
-  font-family: 'Poppins', 'Inter', system-ui, sans-serif;
+  font-family: 'Inter', system-ui, sans-serif;
   font-feature-settings: 'kern' 1, 'liga' 1;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Enhanced prose styling for AI responses */
+/* Professional prose styling */
 .prose-slate {
   --tw-prose-body: rgb(71 85 105);
   --tw-prose-headings: rgb(51 65 85);
   --tw-prose-lead: rgb(100 116 139);
-  --tw-prose-links: rgb(134 162 134);
+  --tw-prose-links: rgb(59 130 246);
   --tw-prose-bold: rgb(51 65 85);
   --tw-prose-counters: rgb(100 116 139);
   --tw-prose-bullets: rgb(203 213 225);
@@ -414,7 +218,7 @@
   --tw-prose-td-borders: rgb(226 232 240);
 }
 
-/* Responsive design with enhanced mobile experience */
+/* Responsive design */
 @media (max-width: 768px) {
   .ai-hub-header,
   .ai-hub-prompts,
@@ -428,42 +232,32 @@
     padding-right: 1rem;
   }
 
-  /* Reduce animation intensity on mobile */
+  /* Reduce hover effects on mobile */
   .ai-hub-prompts button:hover {
-    transform: translateY(-2px) scale(1.01);
+    transform: none;
+    box-shadow: none;
   }
   
   .ai-hub-messages .rounded-2xl:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+    transform: none;
+    box-shadow: none;
   }
 }
 
-/* Accessibility improvements with better motion handling */
+/* Accessibility improvements */
 @media (prefers-reduced-motion: reduce) {
-  .ai-hub-messages > div > div,
-  .animate-thinking,
-  .animate-heartbeat,
-  .animate-pulse-gentle,
-  .animate-float,
   .animate-message-slide-in,
-  .animate-slide-down,
-  .animate-slide-up,
-  .animate-scale-in,
-  .animate-bounce-gentle,
-  .animate-wave,
-  .animate-typing,
-  .animate-ripple {
+  .animate-thinking,
+  .animate-pulse-gentle {
     animation: none;
   }
   
-  /* Preserve essential transitions but reduce intensity */
   .ai-teaching-hub * {
-    transition-duration: 0.1s;
+    transition-duration: 0.01s;
   }
 }
 
-/* Enhanced high contrast mode support */
+/* High contrast mode support */
 @media (prefers-contrast: high) {
   .ai-teaching-hub {
     background: white;
@@ -481,27 +275,26 @@
     border-color: #000;
   }
   
-  /* Enhanced button contrast */
   .ai-hub-header button,
   .ai-hub-input button {
     border: 1px solid #000;
   }
 }
 
-/* Enhanced focus states for better accessibility */
+/* Clean focus states */
 .ai-teaching-hub button:focus-visible,
 .ai-teaching-hub input:focus-visible,
 .ai-teaching-hub textarea:focus-visible {
-  outline: 2px solid rgba(134, 162, 134, 0.6);
+  outline: 2px solid rgba(59, 130, 246, 0.6);
   outline-offset: 2px;
-  box-shadow: 0 0 0 4px rgba(134, 162, 134, 0.2);
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
 }
 
-/* Enhanced smooth transitions with spring physics */
+/* Smooth transitions */
 .ai-teaching-hub * {
-  transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter;
-  transition-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1);
-  transition-duration: 300ms;
+  transition-property: color, background-color, border-color, opacity, box-shadow, transform;
+  transition-timing-function: ease;
+  transition-duration: 150ms;
 }
 
 /* Line clamp utility for text truncation */

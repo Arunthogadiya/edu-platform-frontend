@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { 
-  Camera, 
-  Users, 
-  CheckCircle, 
-  XCircle, 
-  Save, 
-  Play, 
-  Pause, 
+import {
+  Camera,
+  Users,
+  CheckCircle,
+  XCircle,
+  Save,
+  Play,
+  Pause,
   Brain,
   Eye,
   Clock,
@@ -20,15 +20,16 @@ import {
   Check,
   X,
   RefreshCw,
-  BarChart3
+  BarChart3,
+  BookOpen
 } from 'lucide-react';
 import { studentApi, Student } from '../../../../services/api/studentApi';
 import { attendanceApi } from '../../../../services/api/attendanceApi';
 import { useTeacher } from '../../../../contexts/TeacherContext';
+import { useAttendance } from '../../../../context/AttendanceContext';
 import SmartAttendanceInsights from './SmartAttendanceInsights';
-import faceRecognitionService from '../../../../services/faceRecognitionService';
-
-// Add CSS animations for face recognition scanning
+import AttendanceRegisterModal from './AttendanceRegisterModal';
+import faceRecognitionService from '../../../../services/faceRecognitionService';// Add CSS animations for face recognition scanning
 const animationStyles = `
   @keyframes scanVertical {
     0%, 100% { top: 0%; opacity: 0.5; }
@@ -104,6 +105,7 @@ interface AIAttendanceSettings {
 const EnhancedAttendanceSystem: React.FC = () => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const { selectedClass, selectedSection, setSelectedClass, setSelectedSection } = useTeacher();
+  const { refreshAttendance } = useAttendance();
   
   // Core state
   const [students, setStudents] = useState<Student[]>([]);
@@ -146,6 +148,13 @@ const EnhancedAttendanceSystem: React.FC = () => {
     sessionDuration: 0
   });
   
+  // AI Session Timer - NEW
+  const [aiSessionTimer, setAiSessionTimer] = useState<NodeJS.Timeout | null>(null);
+  const [sessionDuration, setSessionDuration] = useState(60); // 1 minute in seconds
+  const [sessionTimeRemaining, setSessionTimeRemaining] = useState(0);
+  const [isSessionComplete, setIsSessionComplete] = useState(false);
+  const [detectedStudents, setDetectedStudents] = useState<Set<number>>(new Set());
+  
   // Face recognition service state
   const [faceServiceInitialized, setFaceServiceInitialized] = useState(false);
   const [faceServiceError, setFaceServiceError] = useState<string | null>(null);
@@ -165,6 +174,32 @@ const EnhancedAttendanceSystem: React.FC = () => {
     studentName: string;
     timestamp: number;
   }>>([]);
+
+  // Add notification state for better user feedback
+  const [notifications, setNotifications] = useState<Array<{
+    id: string;
+    type: 'success' | 'error' | 'info';
+    message: string;
+    timestamp: number;
+  }>>([]);
+
+  const addNotification = (type: 'success' | 'error' | 'info', message: string) => {
+    const notification = {
+      id: Date.now().toString(),
+      type,
+      message,
+      timestamp: Date.now()
+    };
+    setNotifications(prev => [notification, ...prev.slice(0, 4)]);
+    
+    // Auto-remove after 5 seconds
+    setTimeout(() => {
+      setNotifications(prev => prev.filter(n => n.id !== notification.id));
+    }, 5000);
+  };
+
+  // Attendance register modal state
+  const [showAttendanceRegister, setShowAttendanceRegister] = useState(false);
 
   const classes = ['6', '7', '8', '9', '10'];
   const sections = ['A', 'B', 'C'];
@@ -821,6 +856,9 @@ const EnhancedAttendanceSystem: React.FC = () => {
       console.log('⏹️ Cleared auto-confirm timer');
     }
     
+    // Stop AI session timer
+    stopAISessionTimer();
+    
     // Stop media stream tracks properly
     if (mediaStream) {
       console.log('🧹 Stopping media stream tracks...');
@@ -877,6 +915,61 @@ const EnhancedAttendanceSystem: React.FC = () => {
     console.log('✅ AI attendance stopped and cleaned up completely');
   };
 
+  // AI Session Timer Functions
+  const startAISessionTimer = () => {
+    console.log(`⏱️ Starting AI session timer for ${sessionDuration} seconds`);
+    setSessionTimeRemaining(sessionDuration);
+    setIsSessionComplete(false);
+    setDetectedStudents(new Set());
+    
+    const timer = setInterval(() => {
+      setSessionTimeRemaining(prev => {
+        if (prev <= 1) {
+          console.log('⏰ AI session timer completed');
+          clearInterval(timer);
+          setAiSessionTimer(null);
+          completeAISession();
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    
+    setAiSessionTimer(timer);
+  };
+
+  const completeAISession = () => {
+    console.log('🏁 Completing AI session and marking undetected students as absent');
+    setIsSessionComplete(true);
+    
+    // Mark all undetected students as absent
+    setAiAttendance(prev => {
+      const updatedAttendance = { ...prev };
+      students.forEach(student => {
+        if (!detectedStudents.has(student.student_id)) {
+          console.log(`❌ Marking ${student.student_name} as absent (not detected during session)`);
+          updatedAttendance[student.student_id] = 'absence';
+        }
+      });
+      console.log('📝 Final AI attendance state (NOT SAVED TO DB YET):', updatedAttendance);
+      return updatedAttendance;
+    });
+    
+    // Stop face detection
+    stopAIAttendance();
+    
+    addNotification('info', `AI session completed! ${detectedStudents.size} students detected, ${students.length - detectedStudents.size} marked absent. Click "Save All" to save to database.`);
+  };
+
+  const stopAISessionTimer = () => {
+    if (aiSessionTimer) {
+      console.log('⏹️ Stopping AI session timer');
+      clearInterval(aiSessionTimer);
+      setAiSessionTimer(null);
+    }
+    setSessionTimeRemaining(0);
+  };
+
   const startFaceDetection = () => {
     // Clear any existing intervals to prevent duplicates
     if (processingInterval) {
@@ -884,6 +977,9 @@ const EnhancedAttendanceSystem: React.FC = () => {
       clearInterval(processingInterval);
       setProcessingInterval(null);
     }
+    
+    // Start AI session timer
+    startAISessionTimer();
     
     // Get current video element and its stream
     const video = videoRef.current;
@@ -1145,19 +1241,22 @@ const EnhancedAttendanceSystem: React.FC = () => {
           console.log(`👤 Current attendance status for ${detection.studentName} (ID: ${detection.studentId}): ${currentAttendanceStatus}`);
           
           if (currentAttendanceStatus !== 'present') {
-            console.log(`✅ Auto-marking attendance for: ${detection.studentName} (ID: ${detection.studentId})`);
+            console.log(`✅ Marking attendance for: ${detection.studentName} (ID: ${detection.studentId}) - LOCAL ONLY, NOT SAVED TO DB`);
             
-            // Immediately mark attendance when face is detected with high confidence
+            // Mark attendance locally (do NOT save to database during AI session)
             setAiAttendance(prev => {
               const newAttendance = {
                 ...prev,
                 [detection.studentId!]: 'present' as const
               };
-              console.log(`📝 Updated attendance state:`, newAttendance);
+              console.log(`📝 Updated attendance state (LOCAL ONLY - NOT SAVED TO DB):`, newAttendance);
               return newAttendance;
             });
             
-            // Add notification
+            // Track detected students for session completion
+            setDetectedStudents(prev => new Set([...prev, detection.studentId!]));
+            
+            // Add visual notification (not saved to DB)
             const notificationId = Date.now().toString();
             setAttendanceNotifications(prev => [{
               id: notificationId,
@@ -1170,7 +1269,7 @@ const EnhancedAttendanceSystem: React.FC = () => {
               setAttendanceNotifications(prev => prev.filter(n => n.id !== notificationId));
             }, 5000);
             
-            // Add to detection log
+            // Add to detection log (for UI feedback only)
             addToDetectionLog(detection);
             
             // Update session stats
@@ -1178,16 +1277,8 @@ const EnhancedAttendanceSystem: React.FC = () => {
               ...prev,
               confirmedCount: prev.confirmedCount + 1
             }));
-            
-            // Auto-save attendance if enabled
-            if (aiSettings.enableAutoConfirm) {
-              console.log(`💾 Auto-saving attendance for ${detection.studentName}`);
-              setTimeout(() => {
-                saveAttendance(detection.studentId!);
-              }, 1000); // Save after 1 second delay
-            }
           } else {
-            console.log(`⏭️ Student ${detection.studentName} already marked as present, skipping`);
+            console.log(`⏭️ Student ${detection.studentName} already marked as present (locally), skipping`);
           }
         } else {
           console.log(`❌ Detection not processed - Status: ${detection.status}, StudentID: ${detection.studentId || 'undefined'}`);
@@ -1251,27 +1342,7 @@ const EnhancedAttendanceSystem: React.FC = () => {
     });
   };
 
-  const confirmDetection = (detection: FaceDetection) => {
-    if (detection.studentId) {
-      setAiAttendance(prev => ({
-        ...prev,
-        [detection.studentId!]: 'present'
-      }));
 
-      setSessionStats(prev => ({
-        ...prev,
-        confirmedCount: prev.confirmedCount + 1
-      }));
-
-      setDetectionLog(prev => prev.map(log => 
-        log.id === detection.id 
-          ? { ...log, status: 'confirmed' as const }
-          : log
-      ));
-
-      setFaceDetections(prev => prev.filter(d => d.id !== detection.id));
-    }
-  };
 
   const handleManualAttendanceChange = (studentId: number, status: 'present' | 'absence') => {
     setManualAttendance(prev => ({
@@ -1295,20 +1366,218 @@ const EnhancedAttendanceSystem: React.FC = () => {
       
       const attendanceData = attendanceMode === 'ai' ? aiAttendance : manualAttendance;
       
+      // Validate required data before submission
+      if (!selectedClass || !selectedSection) {
+        throw new Error('Class and section are required');
+      }
+      
+      if (!attendanceDate) {
+        throw new Error('Attendance date is required');  
+      }
+      
+      if (!attendanceData[studentId]) {
+        throw new Error('Student attendance status is required');
+      }
+      
+      // Check for existing attendance before saving
+      const existingAttendance = await attendanceApi.checkExistingAttendance(
+        studentId, 
+        attendanceDate, 
+        selectedClass, 
+        selectedSection
+      );
+      
+      if (existingAttendance) {
+        const studentName = students.find(s => s.student_id === studentId)?.student_name || 'student';
+        throw new Error(`Attendance already exists for ${studentName} on ${attendanceDate}`);
+      }
+      
       const data = {
         student_id: studentId,
         attendance_date: attendanceDate,
         status: attendanceData[studentId],
-        notes: notes[studentId] || '',
-        class_value: selectedClass,
-        section: selectedSection
+        notes: notes[studentId] || ''
       };
 
-      await attendanceApi.submitAttendance(data);
+      // Enhanced debug logging with comprehensive context
+      console.log('🔍 === ATTENDANCE SUBMISSION DEBUG ===');
+      console.log('� Submission data:', JSON.stringify(data, null, 2));
+      console.log('� Current context:', {
+        attendanceMode,
+        selectedClass,
+        selectedSection,
+        attendanceDate,
+        studentId,
+        studentIdType: typeof studentId,
+        status: attendanceData[studentId],
+        hasNotes: !!(notes[studentId]),
+        allAttendanceData: attendanceData,
+        allNotes: notes
+      });
+      console.log('🔍 === END DEBUG INFO ===');
+
+      // Additional validation with detailed error messages
+      if (typeof studentId !== 'number' || studentId <= 0) {
+        throw new Error(`Invalid student_id: ${studentId} (type: ${typeof studentId})`);
+      }
+      
+      if (!['present', 'absence'].includes(data.status)) {
+        throw new Error(`Invalid status: "${data.status}" (valid values: present, absence)`);
+      }
+      
+      if (!data.attendance_date.match(/^\d{4}-\d{2}-\d{2}$/)) {
+        throw new Error(`Invalid date format: "${data.attendance_date}" (expected: YYYY-MM-DD)`);
+      }
+
+      // Make the API call with detailed error catching
+      console.log('🚀 Making API call to submitAttendance...');
+      const result = await attendanceApi.submitAttendance(data);
+      console.log('✅ API call successful:', result);
+      
       setSaveStatus(prev => ({ ...prev, [studentId]: 'saved' }));
+      
+      // Refresh attendance context after successful submission
+      if (selectedClass && selectedSection) {
+        await refreshAttendance(selectedClass, selectedSection);
+        
+        // Dispatch event to notify attendance register modal
+        window.dispatchEvent(new CustomEvent('attendanceSaved', {
+          detail: { classValue: selectedClass, section: selectedSection }
+        }));
+        console.log('📢 Dispatched attendance saved event for modal refresh');
+      }
+      
+      // Add success notification
+      addNotification('success', `Attendance saved for ${students.find(s => s.student_id === studentId)?.student_name || 'student'}`);
+      
+      console.log('✅ Attendance saved successfully for student:', studentId);
     } catch (error) {
-      console.error('Error saving attendance:', error);
+      console.error('❌ === ATTENDANCE SUBMISSION ERROR ===');
+      console.error('❌ Error saving attendance:', error);
+      console.error('📋 Error context:', {
+        studentId,
+        selectedClass,
+        selectedSection,
+        attendanceDate,
+        attendanceMode,
+        errorType: error instanceof Error ? error.constructor.name : typeof error,
+        errorMessage: error instanceof Error ? error.message : String(error)
+      });
+      
       setSaveStatus(prev => ({ ...prev, [studentId]: 'error' }));
+      
+      // Add error notification
+      const studentName = students.find(s => s.student_id === studentId)?.student_name || 'student';
+      addNotification('error', `Failed to save attendance for ${studentName}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      
+      // Show detailed error information to user
+      if (error instanceof Error) {
+        console.error('📋 Detailed error info:', {
+          message: error.message,
+          stack: error.stack,
+          name: error.name
+        });
+      }
+      console.error('❌ === END ERROR INFO ===');
+    }
+  };
+
+  // Bulk save function for AI attendance
+  const saveBulkAttendance = async () => {
+    try {
+      setIsLoading(true);
+      console.log('📚 Starting bulk attendance submission...');
+      
+      const attendanceData = attendanceMode === 'ai' ? aiAttendance : manualAttendance;
+      console.log('📝 Current attendance data to save:', attendanceData);
+      
+      // First, get all existing attendance for this date to avoid duplicates
+      console.log('🔍 Checking for existing attendance records...');
+      const existingRecords = await attendanceApi.getAttendanceByDate(
+        attendanceDate, 
+        selectedClass, 
+        selectedSection
+      );
+      
+      const existingStudentIds = new Set(existingRecords.map(record => record.student_id));
+      console.log(`📊 Found existing attendance for ${existingStudentIds.size} students:`, Array.from(existingStudentIds));
+      
+      // Prepare attendance records for students without existing attendance
+      const recordsToSave = students
+        .filter(student => !existingStudentIds.has(student.student_id))
+        .map(student => ({
+          student_id: student.student_id,
+          attendance_date: attendanceDate,
+          status: attendanceData[student.student_id] || 'absence',
+          notes: notes[student.student_id] || ''
+        }));
+      
+      console.log(`📊 Preparing to save attendance for ${recordsToSave.length} students (${existingStudentIds.size} already have attendance for today)`);
+      console.log('📝 Records to save:', recordsToSave);
+
+      if (recordsToSave.length === 0) {
+        addNotification('info', 'All students already have attendance recorded for today!');
+        return;
+      }
+
+      // Use the bulk submit API
+      const result = await attendanceApi.submitBulkAttendance(recordsToSave);
+
+      console.log(`✅ Bulk save completed: ${result.successCount} successful, ${result.errorCount} errors`);
+      
+      if (result.successCount > 0 && result.errorCount === 0) {
+        addNotification('success', `Successfully saved attendance for all ${result.successCount} students!`);
+        
+        // Update save status for all saved students
+        const newSaveStatus: { [key: number]: 'saved' } = {};
+        recordsToSave.forEach(record => {
+          newSaveStatus[record.student_id] = 'saved';
+        });
+        setSaveStatus(prev => ({ ...prev, ...newSaveStatus }));
+        
+        // For AI mode, reset the session complete flag since data is now saved
+        if (attendanceMode === 'ai') {
+          setIsSessionComplete(false);
+        }
+        
+      } else if (result.successCount > 0 && result.errorCount > 0) {
+        addNotification('info', `Saved attendance for ${result.successCount} students (${result.errorCount} errors)`);
+        
+        // Update save status for successful submissions
+        result.successful.forEach(success => {
+          setSaveStatus(prev => ({ ...prev, [success.student_id]: 'saved' }));
+        });
+        
+        // Update save status for failed submissions
+        result.failed.forEach(failure => {
+          setSaveStatus(prev => ({ ...prev, [failure.student_id]: 'error' }));
+        });
+        
+      } else if (result.errorCount > 0) {
+        addNotification('error', `Failed to save attendance for all ${result.errorCount} students`);
+        
+        // Update save status for failed submissions
+        result.failed.forEach(failure => {
+          setSaveStatus(prev => ({ ...prev, [failure.student_id]: 'error' }));
+        });
+      }
+
+      // Refresh attendance context after successful submission
+      if (result.successCount > 0 && selectedClass && selectedSection) {
+        await refreshAttendance(selectedClass, selectedSection);
+        
+        // Dispatch event to notify attendance register modal
+        window.dispatchEvent(new CustomEvent('attendanceSaved', {
+          detail: { classValue: selectedClass, section: selectedSection }
+        }));
+        console.log('📢 Dispatched attendance saved event for modal refresh');
+      }
+
+    } catch (error) {
+      console.error('❌ Bulk attendance save failed:', error);
+      addNotification('error', 'Failed to save bulk attendance. Please try individual saves.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -1382,51 +1651,7 @@ const EnhancedAttendanceSystem: React.FC = () => {
               </div>
             )}
             
-            {/* Debug button for testing face recognition */}
-            {isVideoPlaying && (
-              <div className="flex gap-2">
-                <button
-                  onClick={() => {
-                    console.log('🧪 Manual face recognition test triggered');
-                    performFaceRecognition();
-                  }}
-                  className="flex items-center gap-2 px-4 py-2 bg-yellow-500/20 text-white rounded-xl hover:bg-yellow-500/30 transition-all"
-                >
-                  <Eye className="w-4 h-4" />
-                  <span>Test Recognition</span>
-                </button>
-                
-                <button
-                  onClick={() => {
-                    console.log('🧪 Testing automatic attendance with dummy data');
-                    if (students.length > 0) {
-                      const testStudent = students[0];
-                      console.log('📝 Test marking attendance for:', testStudent.student_name);
-                      setAiAttendance(prev => ({
-                        ...prev,
-                        [testStudent.student_id]: 'present' as const
-                      }));
-                      
-                      // Add test notification
-                      const notificationId = Date.now().toString();
-                      setAttendanceNotifications(prev => [{
-                        id: notificationId,
-                        studentName: testStudent.student_name,
-                        timestamp: Date.now()
-                      }, ...prev.slice(0, 4)]);
-                      
-                      setTimeout(() => {
-                        setAttendanceNotifications(prev => prev.filter(n => n.id !== notificationId));
-                      }, 5000);
-                    }
-                  }}
-                  className="flex items-center gap-2 px-4 py-2 bg-green-500/20 text-white rounded-xl hover:bg-green-500/30 transition-all"
-                >
-                  <CheckCircle className="w-4 h-4" />
-                  <span>Test Auto-Mark</span>
-                </button>
-              </div>
-            )}
+
             
             {!faceServiceInitialized && (
               <div className="flex items-center gap-2 px-3 py-2 bg-yellow-100 text-yellow-800 rounded-lg text-sm">
@@ -1457,7 +1682,7 @@ const EnhancedAttendanceSystem: React.FC = () => {
 
         {/* Session Stats */}
         {isAIActive && (
-          <div className="grid grid-cols-4 gap-4">
+          <div className="grid grid-cols-5 gap-4">
             <div className="bg-white/10 rounded-xl p-3 text-center">
               <div className="text-2xl font-bold">{sessionStats.detectedCount}</div>
               <div className="text-sm text-purple-100">Detected</div>
@@ -1471,8 +1696,28 @@ const EnhancedAttendanceSystem: React.FC = () => {
               <div className="text-sm text-purple-100">Unknown</div>
             </div>
             <div className="bg-white/10 rounded-xl p-3 text-center">
-              <div className="text-2xl font-bold">{Math.floor(sessionStats.sessionDuration / 60)}</div>
-              <div className="text-sm text-purple-100">Minutes</div>
+              <div className="text-2xl font-bold">{detectedStudents.size}</div>
+              <div className="text-sm text-purple-100">Present</div>
+            </div>
+            <div className={`bg-white/10 rounded-xl p-3 text-center ${
+              sessionTimeRemaining <= 10 ? 'animate-pulse bg-red-500/20' : ''
+            }`}>
+              <div className="text-2xl font-bold">
+                {Math.floor(sessionTimeRemaining / 60)}:{(sessionTimeRemaining % 60).toString().padStart(2, '0')}
+              </div>
+              <div className="text-sm text-purple-100">Time Left</div>
+            </div>
+          </div>
+        )}
+
+        {/* Session Complete Message */}
+        {isSessionComplete && (
+          <div className="bg-green-500/20 border border-green-300 rounded-xl p-4 text-center">
+            <div className="text-green-100 font-semibold">
+              🎉 AI Session Complete! {detectedStudents.size} students detected, {students.length - detectedStudents.size} marked absent.
+            </div>
+            <div className="text-green-200 text-sm mt-1">
+              Click "Save All" below to save attendance to database.
             </div>
           </div>
         )}
@@ -1693,22 +1938,7 @@ const EnhancedAttendanceSystem: React.FC = () => {
                     )}
                   </div>
                   
-                  {!aiSettings.enableAutoConfirm && (
-                    <div className="absolute -bottom-12 left-0 flex gap-1">
-                      <button
-                        onClick={() => confirmDetection(detection)}
-                        className="bg-green-500 text-white p-1 rounded text-xs hover:bg-green-600"
-                      >
-                        <Check className="w-3 h-3" />
-                      </button>
-                      <button
-                        onClick={() => setFaceDetections(prev => prev.filter(d => d.id !== detection.id))}
-                        className="bg-red-500 text-white p-1 rounded text-xs hover:bg-red-600"
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
-                    </div>
-                  )}
+                  {/* Detection actions removed - attendance is handled automatically during AI session */}
                 </div>
               ))}
             </div>
@@ -1743,12 +1973,12 @@ const EnhancedAttendanceSystem: React.FC = () => {
                 <span className="text-sm text-gray-700">Auto-confirm</span>
                 <button
                   onClick={() => setAiSettings(prev => ({ ...prev, enableAutoConfirm: !prev.enableAutoConfirm }))}
-                  className={`w-10 h-6 rounded-full transition-colors ${
+                  className={`relative w-10 h-6 rounded-full transition-colors ${
                     aiSettings.enableAutoConfirm ? 'bg-blue-600' : 'bg-gray-300'
                   }`}
                 >
-                  <div className={`w-4 h-4 bg-white rounded-full transition-transform ${
-                    aiSettings.enableAutoConfirm ? 'translate-x-5' : 'translate-x-1'
+                  <div className={`absolute left-1 top-1/2 -translate-y-1/2 w-4 h-4 bg-white rounded-full transition-transform duration-200 ease-in-out ${
+                    aiSettings.enableAutoConfirm ? 'translate-x-4' : 'translate-x-0'
                   }`} />
                 </button>
               </div>
@@ -1773,12 +2003,12 @@ const EnhancedAttendanceSystem: React.FC = () => {
                 <span className="text-sm text-gray-700">Emotion Detection</span>
                 <button
                   onClick={() => setAiSettings(prev => ({ ...prev, enableEmotionDetection: !prev.enableEmotionDetection }))}
-                  className={`w-10 h-6 rounded-full transition-colors ${
+                  className={`relative w-10 h-6 rounded-full transition-colors ${
                     aiSettings.enableEmotionDetection ? 'bg-blue-600' : 'bg-gray-300'
                   }`}
                 >
-                  <div className={`w-4 h-4 bg-white rounded-full transition-transform ${
-                    aiSettings.enableEmotionDetection ? 'translate-x-5' : 'translate-x-1'
+                  <div className={`absolute left-1 top-1/2 -translate-y-1/2 w-4 h-4 bg-white rounded-full transition-transform duration-200 ease-in-out ${
+                    aiSettings.enableEmotionDetection ? 'translate-x-4' : 'translate-x-0'
                   }`} />
                 </button>
               </div>
@@ -1787,12 +2017,12 @@ const EnhancedAttendanceSystem: React.FC = () => {
                 <span className="text-sm text-gray-700">Learning Mode</span>
                 <button
                   onClick={() => setAiSettings(prev => ({ ...prev, enableLearning: !prev.enableLearning }))}
-                  className={`w-10 h-6 rounded-full transition-colors ${
+                  className={`relative w-10 h-6 rounded-full transition-colors ${
                     aiSettings.enableLearning ? 'bg-blue-600' : 'bg-gray-300'
                   }`}
                 >
-                  <div className={`w-4 h-4 bg-white rounded-full transition-transform ${
-                    aiSettings.enableLearning ? 'translate-x-5' : 'translate-x-1'
+                  <div className={`absolute left-1 top-1/2 -translate-y-1/2 w-4 h-4 bg-white rounded-full transition-transform duration-200 ease-in-out ${
+                    aiSettings.enableLearning ? 'translate-x-4' : 'translate-x-0'
                   }`} />
                 </button>
               </div>
@@ -1853,16 +2083,18 @@ const EnhancedAttendanceSystem: React.FC = () => {
               </div>
             </div>
             <button
-              onClick={() => {
-                // Save all AI attendance
-                Object.keys(aiAttendance).forEach(studentId => {
-                  saveAttendance(parseInt(studentId));
-                });
-              }}
-              className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+              onClick={saveBulkAttendance}
+              disabled={isLoading || (!isSessionComplete && !Object.values(aiAttendance).some(status => status === 'present'))}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                isSessionComplete 
+                  ? 'bg-blue-600 text-white hover:bg-blue-700' 
+                  : 'bg-green-600 text-white hover:bg-green-700'
+              }`}
             >
               <Save className="w-4 h-4" />
-              Save All
+              {isLoading ? 'Saving...' : 
+               isSessionComplete ? `Save All to Database (${Object.values(aiAttendance).filter(status => status === 'present').length} Present)` :
+               `Save Current State (${Object.values(aiAttendance).filter(status => status === 'present').length} Present)`}
             </button>
           </div>
         </div>
@@ -2082,6 +2314,31 @@ const EnhancedAttendanceSystem: React.FC = () => {
 
   return (
     <div className="space-y-6 animate-fade-in">
+      {/* Notifications Display */}
+      {notifications.length > 0 && (
+        <div className="fixed top-4 right-4 z-50 space-y-2 max-w-md">
+          {notifications.map((notification) => (
+            <div
+              key={notification.id}
+              className={`px-4 py-3 rounded-lg shadow-lg border border-opacity-20 animate-slide-in-right ${
+                notification.type === 'success' 
+                  ? 'bg-green-50 text-green-800 border-green-200' :
+                notification.type === 'error'
+                  ? 'bg-red-50 text-red-800 border-red-200' :
+                  'bg-blue-50 text-blue-800 border-blue-200'
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                {notification.type === 'success' && <CheckCircle className="w-4 h-4" />}
+                {notification.type === 'error' && <XCircle className="w-4 h-4" />}
+                {notification.type === 'info' && <Clock className="w-4 h-4" />}
+                <span className="text-sm font-medium">{notification.message}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* Enhanced Header */}
       <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-6">
         <div className="space-y-2">
@@ -2093,32 +2350,43 @@ const EnhancedAttendanceSystem: React.FC = () => {
           </p>
         </div>
         
-        {/* Class Selection */}
-        <div className="flex gap-4">
-          <div className="bg-white border border-neutral-200 rounded-xl p-4 min-w-0">
-            <label className="block text-sm font-semibold text-neutral-700 mb-2">Class</label>
-            <select
-              value={selectedClass}
-              onChange={(e) => setSelectedClass(e.target.value)}
-              className="bg-transparent border-0 focus:ring-0 font-bold text-neutral-900 cursor-pointer text-lg appearance-none pr-8"
-            >
-              {classes.map((cls) => (
-                <option key={cls} value={cls}>Class {cls}th</option>
-              ))}
-            </select>
-          </div>
+        <div className="flex flex-col sm:flex-row gap-4">
+          {/* Attendance Register Button */}
+          <button
+            onClick={() => setShowAttendanceRegister(true)}
+            className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-semibold hover:from-indigo-700 hover:to-purple-700 transition-all shadow-lg hover:shadow-xl transform hover:scale-105"
+          >
+            <BookOpen className="w-5 h-5" />
+            View Attendance Register
+          </button>
           
-          <div className="bg-white border border-neutral-200 rounded-xl p-4 min-w-0">
-            <label className="block text-sm font-semibold text-neutral-700 mb-2">Section</label>
-            <select
-              value={selectedSection}
-              onChange={(e) => setSelectedSection(e.target.value)}
-              className="bg-transparent border-0 focus:ring-0 font-bold text-neutral-900 cursor-pointer text-lg appearance-none pr-8"
-            >
-              {sections.map((section) => (
-                <option key={section} value={section}>Section {section}</option>
-              ))}
-            </select>
+          {/* Class Selection */}
+          <div className="flex gap-4">
+            <div className="bg-white border border-neutral-200 rounded-xl p-4 min-w-0">
+              <label className="block text-sm font-semibold text-neutral-700 mb-2">Class</label>
+              <select
+                value={selectedClass}
+                onChange={(e) => setSelectedClass(e.target.value)}
+                className="bg-transparent border-0 focus:ring-0 font-bold text-neutral-900 cursor-pointer text-lg appearance-none pr-8"
+              >
+                {classes.map((cls) => (
+                  <option key={cls} value={cls}>Class {cls}th</option>
+                ))}
+              </select>
+            </div>
+            
+            <div className="bg-white border border-neutral-200 rounded-xl p-4 min-w-0">
+              <label className="block text-sm font-semibold text-neutral-700 mb-2">Section</label>
+              <select
+                value={selectedSection}
+                onChange={(e) => setSelectedSection(e.target.value)}
+                className="bg-transparent border-0 focus:ring-0 font-bold text-neutral-900 cursor-pointer text-lg appearance-none pr-8"
+              >
+                {sections.map((section) => (
+                  <option key={section} value={section}>Section {section}</option>
+                ))}
+              </select>
+            </div>
           </div>
         </div>
       </div>
@@ -2201,6 +2469,15 @@ const EnhancedAttendanceSystem: React.FC = () => {
       {attendanceMode === 'ai' ? renderAIAttendanceView() : 
        attendanceMode === 'manual' ? renderManualAttendanceView() :
        renderInsightsView()}
+
+      {/* Attendance Register Modal */}
+      <AttendanceRegisterModal
+        isOpen={showAttendanceRegister}
+        onClose={() => setShowAttendanceRegister(false)}
+        students={students}
+        selectedClass={selectedClass}
+        selectedSection={selectedSection}
+      />
     </div>
   );
 };

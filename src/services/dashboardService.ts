@@ -1,8 +1,6 @@
 import axios from 'axios';
 import api from './apiConfig';
-import { mockGradesData } from '../data/mockGradesData';
-import { MockDataProvider } from '../utils/mockDataProvider';
-import type { Grade, SubjectGrades } from '../data/mockGradesData';
+import { studentApi } from './api/studentApi';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/edu-platform/v1';
 
@@ -233,34 +231,95 @@ class DashboardService {
 
   async fetchStudents(class_value: string, section: string) {
     try {
-      const response = await axios.get('/api/students', {
-        params: {
-          class_value,
-          section
-        }
-      });
-      return response.data;
+      const students = await studentApi.getStudents(class_value, section);
+      return {
+        success: true,
+        students: students
+      };
     } catch (error) {
       console.error('Error fetching students:', error);
-      throw error;
+      return {
+        success: false,
+        error: 'Failed to fetch students data'
+      };
     }
   }
 
   async getTeacherDashboardStats(class_value: string, section: string): Promise<DashboardStats> {
     try {
-      const response = await api.get('/api/dashboard/stats', {
-        params: {
-          class_value,
-          section,
-        },
-      });
+      // Get today's date in YYYY-MM-DD format
+      const today = new Date().toISOString().split('T')[0];
+      console.log(`🏫 Fetching dashboard stats for Class ${class_value}${section} on ${today}`);
       
-      console.log('Dashboard stats response:', response.data);
+      // Try the stats endpoint first
+      let statsFromApi = null;
+      try {
+        const response = await api.get('/api/dashboard/stats', {
+          params: {
+            class_value,
+            section,
+            date: today, // Add today's date to ensure we get current data
+          },
+        });
+        statsFromApi = response.data;
+        console.log('📊 Dashboard stats from API:', statsFromApi);
+      } catch (apiError) {
+        console.warn('⚠️ Stats API not available, fetching data manually:', apiError);
+      }
+      
+      // If API stats are not available or incomplete, fetch data manually
+      if (!statsFromApi || !statsFromApi.totalStudents) {
+        console.log('🔄 Fetching stats manually...');
+        
+        // Get total students
+        const studentsResponse = await api.get('/api/students', {
+          params: { class_value, section }
+        });
+        const totalStudents = Array.isArray(studentsResponse.data) ? studentsResponse.data.length : 0;
+        
+        // Get today's attendance
+        const attendanceResponse = await api.get('/api/dashboard/attendance', {
+          params: { 
+            attendance_date: today,
+            class_value,
+            section 
+          }
+        });
+        
+        let presentToday = 0;
+        
+        // Process attendance data
+        if (attendanceResponse.data && attendanceResponse.data.students) {
+          const studentsData = attendanceResponse.data.students;
+          presentToday = studentsData.reduce((count: number, student: any) => {
+            if (student.attendance && Array.isArray(student.attendance)) {
+              const todayRecord = student.attendance.find((att: any) => {
+                const attDateStr = typeof att.date === 'string' ? att.date.split('T')[0] : att.date;
+                return attDateStr === today;
+              });
+              if (todayRecord && todayRecord.status === 'present') {
+                return count + 1;
+              }
+            }
+            return count;
+          }, 0);
+        }
+        
+        console.log(`📈 Manual stats: Total=${totalStudents}, Present=${presentToday}`);
+        
+        return {
+          totalStudents,
+          presentToday,
+          avgPerformance: Math.round((presentToday / Math.max(totalStudents, 1)) * 100),
+          upcomingTests: 0,
+        };
+      }
+      
       return {
-        totalStudents: response.data.totalStudents || 0,
-        presentToday: response.data.presentToday || 0,
-        avgPerformance: response.data.avgPerformance || 0,
-        upcomingTests: response.data.upcomingTests || 0,
+        totalStudents: statsFromApi.totalStudents || 0,
+        presentToday: statsFromApi.presentToday || 0,
+        avgPerformance: statsFromApi.avgPerformance || 0,
+        upcomingTests: statsFromApi.upcomingTests || 0,
       };
     } catch (error) {
       console.error('Error fetching dashboard stats:', error);

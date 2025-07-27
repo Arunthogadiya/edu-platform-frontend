@@ -28,5 +28,21 @@
     "loggingIn": "लॉग इन हो रहा है...",
     "loginSuccess": "लॉग इन सफल!",
     "redirecting": "डैशबोर्ड पर भेजा जा रहा है..."
+  },
+  "teacher": {
+    "attendance": {
+      "leaveRequests": "छुट्टी के अनुरोध"
+    },
+    "assessments": {
+      "title": "छात्र मूल्यांकन",
+      "progressReports": "प्रगति रिपोर्ट",
+      "detailedReports": "विस्तृत रिपोर्ट",
+      "newAssessment": "नया मूल्यांकन",
+      "quickActions": "त्वरित कार्य",
+      "generateReport": "रिपोर्ट तैयार करें",
+      "addComments": "टिप्पणियाँ जोड़ें",
+      "comparePerformance": "प्रदर्शन की तुलना करें",
+      "suggestions": "सुझाव और अनुशंसाएं"
+    }
   }
 }

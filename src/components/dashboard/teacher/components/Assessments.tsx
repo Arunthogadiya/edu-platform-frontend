@@ -2,6 +2,20 @@ import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { dashboardService } from '../../../../services/dashboardService';
 import { useTeacher } from '../../../../contexts/TeacherContext';
+import { 
+  ChevronDown, 
+  FileText, 
+  BarChart2, 
+  Users, 
+  Calendar,
+  PlusCircle,
+  Download,
+  MessageSquare,
+  TrendingUp,
+  AlertCircle,
+  CheckCircle,
+  Award
+} from 'lucide-react';
 
 interface Student {
   student_id: number;
@@ -43,7 +57,12 @@ const Assessments: React.FC = () => {
       setSelectedStudent(null); // Reset selected student when filters change
       
       const response = await dashboardService.fetchStudents(selectedClass, selectedSection);
-      setStudents(response.students || []);
+      if (response.success && response.students) {
+        setStudents(response.students);
+      } else {
+        setError(response.error || 'Failed to load student data');
+        setStudents([]);
+      }
     } catch (err) {
       console.error('Error loading students:', err);
       setError('Failed to load student data');
@@ -64,17 +83,21 @@ const Assessments: React.FC = () => {
     return gradeMap[grade] || 0;
   };
 
+  // Update the classAverages calculation to handle empty students array
   const calculateClassAverages = () => {
-    const allSubjects = new Set(students.flatMap(s => s.subjects.map(sub => sub.subject)));
+    if (!students || students.length === 0) return {};
+    
+    const allSubjects = new Set(students.flatMap(s => s.subjects?.map(sub => sub.subject) || []));
     const averages: { [key: string]: number } = {};
 
     allSubjects.forEach(subject => {
       const allGrades = students.flatMap(s => 
-        s.subjects
-          .filter(sub => sub.subject === subject)
-          .flatMap(sub => sub.grades.map(g => gradeToNumber(g.grade)))
+        s.subjects?.filter(sub => sub.subject === subject)
+          .flatMap(sub => sub.grades?.map(g => gradeToNumber(g.grade)) || []) || []
       );
-      averages[subject] = allGrades.reduce((acc, val) => acc + val, 0) / allGrades.length;
+      averages[subject] = allGrades.length > 0 ? 
+        allGrades.reduce((acc, val) => acc + val, 0) / allGrades.length : 
+        0;
     });
 
     return averages;
@@ -82,18 +105,27 @@ const Assessments: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-blue-500 border-t-transparent"></div>
+      <div className="flex items-center justify-center min-h-[500px]">
+        <div className="text-center space-y-4">
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-[3px] border-current border-t-transparent text-blue-600 opacity-75"></div>
+          <p className="text-sm text-gray-500 font-medium">Loading assessment data...</p>
+        </div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="p-6">
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700">
-          <p>{error}</p>
-          <button onClick={loadStudents} className="mt-2 text-sm text-red-600 hover:text-red-800 underline">
+      <div className="p-8">
+        <div className="bg-red-50 border-l-4 border-red-500 p-6 rounded-lg">
+          <div className="flex items-center">
+            <AlertCircle className="h-6 w-6 text-red-500 mr-3" />
+            <p className="text-red-700 font-medium">{error}</p>
+          </div>
+          <button 
+            onClick={loadStudents} 
+            className="mt-4 px-4 py-2 text-sm text-red-600 hover:text-red-700 font-medium hover:bg-red-50 rounded-lg transition-colors"
+          >
             Try Again
           </button>
         </div>
@@ -104,216 +136,325 @@ const Assessments: React.FC = () => {
   const classAverages = calculateClassAverages();
 
   return (
-    <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h1 className="text-2xl font-bold">{t('teacher.assessments.title')}</h1>
-          {selectedClass && selectedSection && (
-            <p className="text-gray-600 mt-1">Class {selectedClass} - Section {selectedSection}</p>
-          )}
-        </div>
-        <div className="flex items-center gap-4">
-          {/* Student Filter - Only shown when both class and section are selected */}
-          {students.length > 0 && (
-            <div>
-              <label htmlFor="student-select" className="block text-sm font-medium text-gray-700 mb-1">
-                Student
-              </label>
-              <select
-                id="student-select"
-                value={selectedStudent || ''}
-                onChange={(e) => setSelectedStudent(e.target.value ? parseInt(e.target.value) : null)}
-                className="px-4 py-2 border rounded min-w-[200px]"
-              >
-                <option value="">All Students</option>
-                {students.map(student => (
-                  <option key={student.student_id} value={student.student_id}>
-                    {student.student_name}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
+    <div className="p-8 max-w-[1600px] mx-auto">
+      {/* Enhanced Header */}
+      <div className="mb-8">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+          <div>
+            <h1 className="text-2xl font-semibold text-gray-900 flex items-center gap-3">
+              <FileText className="h-7 w-7 text-blue-600" />
+              {t('teacher.assessments.title')}
+            </h1>
+            {selectedClass && selectedSection && (
+              <p className="mt-1 text-gray-500">
+                Class {selectedClass} - Section {selectedSection}
+              </p>
+            )}
+          </div>
 
-          <button
-            className="px-4 py-2 bg-blue-600 text-white rounded mt-6"
-            onClick={() => {/* Open new assessment modal */}}
-            disabled={!selectedClass || !selectedSection}
-          >
-            {t('teacher.assessments.newAssessment')}
-          </button>
+          <div className="flex items-center gap-4">
+            {students && students.length > 0 && (
+              <div className="relative">
+                <select
+                  value={selectedStudent || ''}
+                  onChange={(e) => setSelectedStudent(e.target.value ? parseInt(e.target.value) : null)}
+                  className="appearance-none bg-white pl-4 pr-10 py-2.5 border border-gray-200 rounded-lg text-sm text-gray-700 font-medium hover:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200 transition-all min-w-[200px]"
+                >
+                  <option value="">All Students</option>
+                  {students.map(student => (
+                    <option key={student.student_id} value={student.student_id}>
+                      {student.student_name}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+              </div>
+            )}
+
+            <button
+              className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
+              onClick={() => {/* Open new assessment modal */}}
+              disabled={!selectedClass || !selectedSection}
+            >
+              <PlusCircle className="h-4 w-4" />
+              {t('teacher.assessments.newAssessment')}
+            </button>
+          </div>
         </div>
       </div>
 
       {/* Show message when no class/section are selected */}
       {!selectedClass || !selectedSection ? (
-        <div className="text-center p-8 bg-gray-50 rounded-lg">
-          <p className="text-gray-600">Please select both class and section from the dashboard to view student assessments.</p>
+        <div className="text-center py-12 bg-gray-50 rounded-xl border border-dashed border-gray-200">
+          <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+          <p className="text-gray-600 font-medium">
+            Please select both class and section from the dashboard to view student assessments.
+          </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2">
-            <div className="bg-white rounded-lg shadow p-4">
-              <div className="flex gap-4 mb-4">
-                <button
-                  onClick={() => setSelectedType('progress')}
-                  className={`px-4 py-2 rounded ${
-                    selectedType === 'progress' ? 'bg-blue-600 text-white' : 'bg-gray-200'
-                  }`}
-                >
-                  {t('teacher.assessments.progressReports')}
-                </button>
-                <button
-                  onClick={() => setSelectedType('report')}
-                  className={`px-4 py-2 rounded ${
-                    selectedType === 'report' ? 'bg-blue-600 text-white' : 'bg-gray-200'
-                  }`}
-                >
-                  {t('teacher.assessments.detailedReports')}
-                </button>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="lg:col-span-2 space-y-8">
+            {/* Stats Overview */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+              <div className="bg-white rounded-xl border border-gray-100 p-6 shadow-sm hover:shadow-md transition-shadow">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-500 mb-1">Total Students</p>
+                    <p className="text-2xl font-semibold text-gray-900">{students.length}</p>
+                  </div>
+                  <Users className="h-8 w-8 text-blue-600" />
+                </div>
+              </div>
+              
+              <div className="bg-white rounded-xl border border-gray-100 p-6 shadow-sm hover:shadow-md transition-shadow">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-500 mb-1">Average Performance</p>
+                    <p className="text-2xl font-semibold text-gray-900">
+                      {Object.values(classAverages).reduce((a, b) => a + b, 0) / Object.values(classAverages).length || 0}%
+                    </p>
+                  </div>
+                  <BarChart2 className="h-8 w-8 text-green-600" />
+                </div>
+              </div>
+              
+              <div className="bg-white rounded-xl border border-gray-100 p-6 shadow-sm hover:shadow-md transition-shadow">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-500 mb-1">Assessment Period</p>
+                    <p className="text-2xl font-semibold text-gray-900">Term 1</p>
+                  </div>
+                  <Calendar className="h-8 w-8 text-purple-600" />
+                </div>
+              </div>
+            </div>
+
+            {/* Assessment Type Tabs */}
+            <div className="bg-white rounded-xl border border-gray-100 shadow-sm">
+              <div className="p-6 border-b border-gray-100">
+                <div className="flex gap-4">
+                  <button
+                    onClick={() => setSelectedType('progress')}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      selectedType === 'progress' 
+                        ? 'bg-blue-50 text-blue-700' 
+                        : 'text-gray-600 hover:bg-gray-50'
+                    }`}
+                  >
+                    {t('teacher.assessments.progressReports')}
+                  </button>
+                  <button
+                    onClick={() => setSelectedType('report')}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      selectedType === 'report' 
+                        ? 'bg-blue-50 text-blue-700' 
+                        : 'text-gray-600 hover:bg-gray-50'
+                    }`}
+                  >
+                    {t('teacher.assessments.detailedReports')}
+                  </button>
+                </div>
               </div>
 
-              {selectedType === 'progress' ? (
-                <div className="space-y-6">
-                  {(selectedStudent ? 
-                    [students.find(s => s.student_id === selectedStudent)] : 
-                    students
-                  ).map(student => student && (
-                    <div key={student.student_id} className="p-4 border rounded-lg">
-                      <div className="flex justify-between items-start mb-4">
-                        <h3 className="font-medium">{student.student_name}</h3>
-                        <span className="text-sm text-gray-500">Gender: {student.gender}</span>
-                      </div>
-                      <div className="space-y-4">
-                        {student.subjects.map(subject => (
-                          <div key={subject.subject} className="flex items-center gap-4">
-                            <div className="flex-1">
-                              <div className="flex justify-between mb-1">
-                                <span className="text-sm font-medium">
+              <div className="p-6">
+                {selectedType === 'progress' ? (
+                  <div className="space-y-6">
+                    {(selectedStudent ? 
+                      students.filter(s => s.student_id === selectedStudent) : 
+                      students
+                    ).map(student => student && (
+                      <div key={student.student_id} className="bg-white rounded-lg border border-gray-100 hover:border-blue-200 transition-colors p-6">
+                        <div className="flex justify-between items-start mb-6">
+                          <div>
+                            <h3 className="text-lg font-medium text-gray-900">{student.student_name}</h3>
+                            <p className="text-sm text-gray-500 mt-1">Student ID: {student.student_id}</p>
+                          </div>
+                          <span className="text-sm font-medium text-gray-500">{student.gender}</span>
+                        </div>
+                        <div className="space-y-4">
+                          {student.subjects?.map(subject => (
+                            <div key={subject.subject} className="space-y-2">
+                              <div className="flex justify-between items-center">
+                                <span className="text-sm font-medium text-gray-700">
                                   {subject.subject.charAt(0).toUpperCase() + subject.subject.slice(1)}
                                 </span>
-                                <span className="text-sm text-gray-600">
-                                  {subject.grades.length > 0 ? gradeToNumber(subject.grades[0].grade) : 'N/A'}%
-                                </span>
+                                <div className="flex items-center gap-4">
+                                  <span className="text-sm text-gray-500">
+                                    Class Avg: {classAverages[subject.subject]?.toFixed(1) || 'N/A'}%
+                                  </span>
+                                  <span className="text-sm font-medium text-gray-900">
+                                    {subject.grades?.length > 0 ? gradeToNumber(subject.grades[0].grade) : 'N/A'}%
+                                  </span>
+                                </div>
                               </div>
-                              <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+                              <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
                                 <div 
-                                  className={`h-full rounded-full ${
-                                    subject.grades.length > 0 && gradeToNumber(subject.grades[0].grade) >= 80 ? 'bg-green-500' :
-                                    subject.grades.length > 0 && gradeToNumber(subject.grades[0].grade) >= 70 ? 'bg-yellow-500' :
-                                    'bg-red-500'
+                                  className={`h-full rounded-full transition-all ${
+                                    subject.grades?.length > 0 && gradeToNumber(subject.grades[0].grade) >= 80 
+                                      ? 'bg-green-500' 
+                                      : subject.grades?.length > 0 && gradeToNumber(subject.grades[0].grade) >= 70 
+                                      ? 'bg-yellow-500' 
+                                      : 'bg-red-500'
                                   }`}
-                                  style={{ width: `${subject.grades.length > 0 ? gradeToNumber(subject.grades[0].grade) : 0}%` }}
+                                  style={{ 
+                                    width: `${subject.grades?.length > 0 ? gradeToNumber(subject.grades[0].grade) : 0}%`,
+                                    transition: 'width 1s ease-in-out'
+                                  }}
                                 />
                               </div>
                             </div>
-                            <span className="text-sm text-gray-500">
-                              Class Avg: {classAverages[subject.subject].toFixed(1)}%
-                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="space-y-6">
+                    {(selectedStudent ? 
+                      students.filter(s => s.student_id === selectedStudent) : 
+                      students
+                    ).map(student => student && (
+                      <div key={student.student_id} className="bg-white rounded-lg border border-gray-100 hover:border-blue-200 transition-colors p-6">
+                        <div className="flex justify-between items-start mb-6">
+                          <div>
+                            <h3 className="text-lg font-medium text-gray-900">{student.student_name}</h3>
+                            <p className="text-sm text-gray-500 mt-1">Student ID: {student.student_id}</p>
                           </div>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="space-y-6">
-                  {(selectedStudent ? 
-                    [students.find(s => s.student_id === selectedStudent)] : 
-                    students
-                  ).map(student => student && (
-                    <div key={student.student_id} className="p-4 border rounded-lg">
-                      <div className="flex justify-between items-start mb-4">
-                        <div>
-                          <h3 className="font-medium">{student.student_name}</h3>
-                          <p className="text-sm text-gray-500">Student ID: {student.student_id}</p>
+                          <button className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors">
+                            <Download className="h-4 w-4" />
+                            Download Report
+                          </button>
                         </div>
-                        <button className="text-blue-600 text-sm hover:text-blue-800">
-                          Generate PDF Report
-                        </button>
-                      </div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <h4 className="font-medium mb-2">Academic Performance</h4>
-                          <p className="text-sm text-gray-600">
-                            Overall grade average: {
-                              student.subjects.flatMap(sub => sub.grades.map(g => gradeToNumber(g.grade)))
-                                .reduce((acc, grade) => acc + grade, 0) / 
-                                student.subjects.flatMap(sub => sub.grades).length
-                            }%
-                          </p>
-                          <p className="text-sm text-gray-600">
-                            Completed assignments: {/* Add completed assignments data */}
-                          </p>
-                          <p className="text-sm text-gray-600">
-                            Pending assignments: {/* Add pending assignments data */}
-                          </p>
-                        </div>
-                        <div>
-                          <h4 className="font-medium mb-2">Recommendations</h4>
-                          <div className="space-y-1">
-                            {student.subjects
-                              .filter(sub => sub.grades.some(g => gradeToNumber(g.grade) < 75))
-                              .map(sub => (
-                                <p key={sub.subject} className="text-sm text-red-600">
-                                  • Needs additional support in {sub.subject}
-                                </p>
-                              ))}
-                            {student.subjects
-                              .filter(sub => sub.grades.some(g => gradeToNumber(g.grade) >= 90))
-                              .map(sub => (
-                                <p key={sub.subject} className="text-sm text-green-600">
-                                  • Shows excellent progress in {sub.subject}
-                                </p>
-                              ))}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          <div className="space-y-4">
+                            <h4 className="text-sm font-semibold text-gray-900">Academic Performance</h4>
+                            <div className="space-y-2">
+                              <div className="flex items-center justify-between py-2 border-b border-gray-100">
+                                <span className="text-sm text-gray-600">Overall Grade Average</span>
+                                <span className="text-sm font-medium text-gray-900">
+                                  {(student.subjects?.flatMap(sub => sub.grades?.map(g => gradeToNumber(g.grade)) || [])
+                                    .reduce((acc, grade) => acc + grade, 0) / 
+                                    (student.subjects?.flatMap(sub => sub.grades || []).length || 1)).toFixed(1)}%
+                                </span>
+                              </div>
+                              <div className="flex items-center justify-between py-2 border-b border-gray-100">
+                                <span className="text-sm text-gray-600">Completed Assignments</span>
+                                <span className="text-sm font-medium text-gray-900">
+                                  {student.subjects?.reduce((acc, sub) => acc + (sub.grades?.length || 0), 0) || 0}
+                                </span>
+                              </div>
+                              <div className="flex items-center justify-between py-2 border-b border-gray-100">
+                                <span className="text-sm text-gray-600">Performance Trend</span>
+                                <span className="text-sm font-medium text-green-600 flex items-center gap-1">
+                                  <TrendingUp className="h-4 w-4" />
+                                  Improving
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="space-y-4">
+                            <h4 className="text-sm font-semibold text-gray-900">Recommendations</h4>
+                            <div className="space-y-3">
+                              {student.subjects
+                                ?.filter(sub => sub.grades?.some(g => gradeToNumber(g.grade) < 75))
+                                .map(sub => (
+                                  <div key={sub.subject} className="flex items-start gap-2 text-sm text-red-600">
+                                    <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                                    <p>Needs additional support in {sub.subject}</p>
+                                  </div>
+                                ))}
+                              {student.subjects
+                                ?.filter(sub => sub.grades?.some(g => gradeToNumber(g.grade) >= 90))
+                                .map(sub => (
+                                  <div key={sub.subject} className="flex items-start gap-2 text-sm text-green-600">
+                                    <CheckCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                                    <p>Shows excellent progress in {sub.subject}</p>
+                                  </div>
+                                ))}
+                            </div>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
           <div className="space-y-6">
-            <div className="bg-white rounded-lg shadow p-4">
-              <h2 className="text-lg font-semibold mb-4">{t('teacher.assessments.quickActions')}</h2>
+            {/* Quick Actions Card */}
+            <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6">
+              <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                <Award className="h-5 w-5 text-blue-600" />
+                {t('teacher.assessments.quickActions')}
+              </h2>
               <div className="space-y-3">
-                <button className="w-full px-4 py-2 text-left bg-gray-50 hover:bg-gray-100 rounded">
-                  {t('teacher.assessments.generateReport')}
+                <button className="w-full flex items-center gap-3 px-4 py-3 text-left bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors group">
+                  <Download className="h-4 w-4 text-gray-400 group-hover:text-gray-600" />
+                  <span className="text-sm font-medium text-gray-700 group-hover:text-gray-900">
+                    {t('teacher.assessments.generateReport')}
+                  </span>
                 </button>
-                <button className="w-full px-4 py-2 text-left bg-gray-50 hover:bg-gray-100 rounded">
-                  {t('teacher.assessments.addComments')}
+                <button className="w-full flex items-center gap-3 px-4 py-3 text-left bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors group">
+                  <MessageSquare className="h-4 w-4 text-gray-400 group-hover:text-gray-600" />
+                  <span className="text-sm font-medium text-gray-700 group-hover:text-gray-900">
+                    {t('teacher.assessments.addComments')}
+                  </span>
                 </button>
-                <button className="w-full px-4 py-2 text-left bg-gray-50 hover:bg-gray-100 rounded">
-                  {t('teacher.assessments.comparePerformance')}
+                <button className="w-full flex items-center gap-3 px-4 py-3 text-left bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors group">
+                  <BarChart2 className="h-4 w-4 text-gray-400 group-hover:text-gray-600" />
+                  <span className="text-sm font-medium text-gray-700 group-hover:text-gray-900">
+                    {t('teacher.assessments.comparePerformance')}
+                  </span>
                 </button>
               </div>
             </div>
 
-            <div className="bg-white rounded-lg shadow p-4">
-              <h2 className="text-lg font-semibold mb-4">{t('teacher.assessments.suggestions')}</h2>
-              <div className="space-y-2 text-sm">
-                {selectedStudent ? (
+            {/* Suggestions Card */}
+            <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6">
+              <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                <Award className="h-5 w-5 text-purple-600" />
+                {t('teacher.assessments.suggestions')}
+              </h2>
+              <div className="space-y-4">
+                {selectedStudent && students.length > 0 ? (
                   students.find(s => s.student_id === selectedStudent)?.subjects && (
                     <>
                       {students.find(s => s.student_id === selectedStudent)!.subjects
-                        .map(sub => (
-                          <p key={sub.subject} className={sub.grades.some(g => gradeToNumber(g.grade) < 75) ? 'text-red-600' : 'text-gray-600'}>
-                            • {sub.grades.some(g => gradeToNumber(g.grade) < 75) 
-                                ? `Consider remedial sessions for ${sub.subject}` 
+                        ?.map(sub => (
+                          <div 
+                            key={sub.subject} 
+                            className={`p-4 rounded-lg ${
+                              sub.grades?.some(g => gradeToNumber(g.grade) < 75)
+                                ? 'bg-red-50 text-red-700'
+                                : 'bg-green-50 text-green-700'
+                            }`}
+                          >
+                            <p className="text-sm font-medium">
+                              {sub.grades?.some(g => gradeToNumber(g.grade) < 75)
+                                ? `Consider remedial sessions for ${sub.subject}`
                                 : `Maintain current progress in ${sub.subject}`}
-                          </p>
+                            </p>
+                          </div>
                         ))}
                     </>
                   )
                 ) : (
-                  <>
-                    <p>• Schedule performance review meetings</p>
-                    <p>• Update assessment criteria for next term</p>
-                    <p>• Review class-wide improvement areas</p>
-                  </>
+                  <div className="space-y-3">
+                    <div className="flex items-start gap-3 p-4 bg-blue-50 rounded-lg">
+                      <Calendar className="h-5 w-5 text-blue-600 flex-shrink-0" />
+                      <p className="text-sm font-medium text-blue-700">Schedule performance review meetings</p>
+                    </div>
+                    <div className="flex items-start gap-3 p-4 bg-purple-50 rounded-lg">
+                      <FileText className="h-5 w-5 text-purple-600 flex-shrink-0" />
+                      <p className="text-sm font-medium text-purple-700">Update assessment criteria for next term</p>
+                    </div>
+                    <div className="flex items-start gap-3 p-4 bg-green-50 rounded-lg">
+                      <Users className="h-5 w-5 text-green-600 flex-shrink-0" />
+                      <p className="text-sm font-medium text-green-700">Review class-wide improvement areas</p>
+                    </div>
+                  </div>
                 )}
               </div>
             </div>

@@ -16,8 +16,8 @@ interface WebSocketMessage {
 
 class AITeachingHubService {
   private wsConnection: WebSocket | null = null;
-  private wsBaseUrl = 'wss://teacher-assistant-939627319138.asia-south1.run.app';
-  private httpBaseUrl = 'https://teacher-assistant-939627319138.asia-south1.run.app';
+  private wsBaseUrl = 'wss://teacher-agent-939627319138.asia-south1.run.app';
+  private httpBaseUrl = 'https://teacher-agent-939627319138.asia-south1.run.app';
   private messageHandlers: Map<string, (message: WebSocketMessage) => void> = new Map();
   private currentMessageId: string | null = null; // Track current streaming message
 

@@ -32,6 +32,17 @@
   "teacher": {
     "attendance": {
       "leaveRequests": "Leave Requests"
+    },
+    "assessments": {
+      "title": "Student Assessments",
+      "progressReports": "Progress Reports",
+      "detailedReports": "Detailed Reports",
+      "newAssessment": "New Assessment",
+      "quickActions": "Quick Actions",
+      "generateReport": "Generate Report",
+      "addComments": "Add Comments",
+      "comparePerformance": "Compare Performance",
+      "suggestions": "Suggestions & Recommendations"
     }
   }
 }

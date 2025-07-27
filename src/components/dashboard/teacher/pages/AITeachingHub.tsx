@@ -1612,8 +1612,8 @@ const AITeachingHub: React.FC = () => {
                     message.type === 'user' ? 'justify-end' : 'justify-start'
                   }`}
                   style={{ 
-                    animationDelay: `${index * 100}ms`,
-                    animationFillMode: 'backwards'
+                    // animationDelay: `${index * 100}ms`,
+                    // animationFillMode: 'backwards'
                   }}
                 >
                   <div className={`flex gap-4 max-w-[80%] ${
