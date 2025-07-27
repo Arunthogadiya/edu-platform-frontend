@@ -229,6 +229,43 @@ class AITeachingHubService {
   isWebSocketConnected(): boolean {
     return this.wsConnection !== null && this.wsConnection.readyState === WebSocket.OPEN;
   }
+
+  // Generate student report using LLM
+  async generateStudentReport(studentName: string, studentId: number): Promise<string> {
+    try {
+      const hardcodedPrompt = `Generate a comprehensive grade card report for student ${studentName} (ID: ${studentId}). 
+      
+Please provide a detailed report covering:
+1. Academic Performance - Include grades and progress in various subjects over the previous 30 days
+2. Attendance Record - Detail attendance patterns and any concerns over the previous 30 days  
+3. Behavior Analysis - Assess classroom behavior, participation, and social interactions over the previous 30 days
+4. Strengths and Areas for Improvement - Highlight what the student excels at and areas needing attention
+5. Recommendations - Provide specific actionable recommendations for the student's continued growth
+
+Format this as a professional grade card that could be shared with parents. Use proper formatting with clear sections and make it comprehensive yet easy to understand.`;
+
+      const response = await fetch(`${this.httpBaseUrl}/api/chat`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: hardcodedPrompt,
+          session_id: `report_${Date.now()}` // Generate a unique session ID for the report
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP request failed: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data.response;
+    } catch (error) {
+      console.error('Error generating student report:', error);
+      throw error;
+    }
+  }
 }
 
 export const aiTeachingHubService = new AITeachingHubService();

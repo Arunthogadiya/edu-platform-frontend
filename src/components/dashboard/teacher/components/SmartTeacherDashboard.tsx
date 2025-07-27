@@ -6,23 +6,19 @@ import {
   FileText, 
   BookOpen, 
   TrendingUp, 
-  Search, 
-  UserPlus, 
   X, 
   ChevronRight,
   Brain,
   Activity,
-  Zap,
   Target,
   Lightbulb,
   Calendar,
   Clock,
   Eye,
   Settings,
-  Keyboard,
   Play
 } from 'lucide-react';
-import { studentApi, Student } from '../../../../services/api/studentApi';
+import { studentApi } from '../../../../services/api/studentApi';
 import { attendanceApi } from '../../../../services/api/attendanceApi';
 import { useAttendance } from '../../../../context/AttendanceContext';
 import { useTeacher } from '../../../../contexts/TeacherContext';
@@ -72,7 +68,6 @@ const SmartTeacherDashboard: React.FC = () => {
     upcomingTests: 0
   });
   const [isLoading, setIsLoading] = useState(true);
-  const [students, setStudents] = useState<Student[]>([]);
   const [insights, setInsights] = useState<SmartInsight[]>([]);
   const [tasks, setTasks] = useState<WorkflowTask[]>([]);
   const [selectedInsight, setSelectedInsight] = useState<SmartInsight | null>(null);
@@ -97,7 +92,7 @@ const SmartTeacherDashboard: React.FC = () => {
       setError(null);
 
       const studentsData = await studentApi.getStudents(selectedClass, selectedSection);
-      setStudents(Array.isArray(studentsData) ? studentsData : []);
+      // setStudents(Array.isArray(studentsData) ? studentsData : []);
 
       const attendanceOverview = await attendanceApi.getClassOverview(selectedClass, selectedSection);
       

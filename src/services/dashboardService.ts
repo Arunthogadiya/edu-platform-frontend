@@ -162,6 +162,27 @@ class DashboardService {
     }
   }
 
+  async fetchClassGrades(class_value: string, section: string): Promise<GradesResponse> {
+    try {
+      console.log('Fetching class grades for:', { class_value, section });
+      const response = await api.get(`/api/dashboard/grades`, {
+        params: { 
+          class_value,
+          section 
+        }
+      });
+      console.log('Class grades response:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching class grades:', error);
+      // Re-throw with more context
+      if (error instanceof Error) {
+        throw new Error(`Failed to fetch grades for class ${class_value}${section}: ${error.message}`);
+      }
+      throw error;
+    }
+  }
+
   async fetchAttendance(userId: string | number, date?: string) {
     try {
       const response = await api.get(`/api/dashboard/attendance`, {

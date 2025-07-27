@@ -139,7 +139,9 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onToggleCollapse, userTy
               <GraduationCap className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h2 className="text-white font-display font-bold text-xl tracking-tight">EduPlatform</h2>
+              <h2 className="text-white font-display font-bold text-xl tracking-tight">
+                Guru-<span className="bg-gradient-to-r from-[rgb(66,133,244)] via-[rgb(15,157,88)] via-[rgb(244,160,0)] to-[rgb(219,68,55)] bg-clip-text text-transparent">G</span>
+              </h2>
               <p className="text-white/60 text-sm font-medium">Teacher Dashboard v2.0</p>
             </div>
           </div>
@@ -255,8 +257,8 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onToggleCollapse, userTy
               <span className="text-white text-sm font-bold">T</span>
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-white text-sm font-semibold truncate">Teacher Mode</p>
-              <p className="text-white/60 text-xs truncate">Modern Dashboard • Online</p>
+              <p className="text-white text-sm font-semibold truncate">Teacher</p>
+              <p className="text-white/60 text-xs truncate">Online</p>
             </div>
             <div className="w-3 h-3 bg-mint rounded-full animate-pulse shadow-lg" />
           </div>

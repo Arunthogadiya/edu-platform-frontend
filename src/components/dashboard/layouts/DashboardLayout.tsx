@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Menu, X, User, LogOut, Search, Bell, Settings, ChevronRight, GraduationCap, Calendar, MessageSquare, Users, Brain, Award, Activity, BookOpen, HelpCircle } from 'lucide-react';
+import { Menu, X, User, LogOut, Search, Bell, Settings, ChevronRight, GraduationCap, Calendar, MessageSquare, Users, Brain, Award, Activity, BookOpen, HelpCircle, Network } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import DashboardErrorBoundary from '../parent/DashboardErrorBoundary';
 import VoiceQuery from '../parent/VoiceQuery';
 import NotificationBell from '../../common/NotificationBell';
+import ArchitectureModal from '../../common/ArchitectureModal';
 import Sidebar from './Sidebar';
 
 interface DashboardLayoutProps {
@@ -15,6 +16,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, userType })
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [showArchitectureModal, setShowArchitectureModal] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
   const userData = JSON.parse(localStorage.getItem('userData') || 'null');
@@ -179,6 +181,16 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, userType })
 
               {/* Right Section - Enhanced Actions */}
               <div className="flex items-center space-x-4">
+                {/* Architecture Button */}
+                <button 
+                  onClick={() => setShowArchitectureModal(true)}
+                  className="relative p-3 rounded-2xl bg-white/60 hover:bg-white/90 
+                    transition-all duration-300 hover:scale-105 hover:shadow-md group"
+                  title="System Architecture"
+                >
+                  <Network className="w-5 h-5 text-neutral-600 group-hover:text-primary-600" />
+                </button>
+
                 {/* Notification Bell */}
                 <button className="relative p-3 rounded-2xl bg-white/60 hover:bg-white/90 
                   transition-all duration-300 hover:scale-105 hover:shadow-md group">
@@ -262,6 +274,12 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, userType })
               onClick={() => setIsSidebarOpen(false)}
             />
           )}
+
+          {/* Architecture Modal */}
+          <ArchitectureModal 
+            isOpen={showArchitectureModal} 
+            onClose={() => setShowArchitectureModal(false)} 
+          />
         </div>
       </DashboardErrorBoundary>
     );
